@@ -1,1 +1,1 @@
-# ComputerGraphicsFinalProject
+Computer Graphics Final Project
