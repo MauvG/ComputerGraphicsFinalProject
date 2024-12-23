@@ -60,5 +60,5 @@ vec4 directLight()
 
 void main()
 {
-	FragColor = directLight();
+	FragColor = pointLight() + directLight(); 
 }
