@@ -11,6 +11,7 @@
 #include "VAO.h"
 #include "VBO.h"
 #include "EBO.h"
+#include"Camera.h"
 
 const unsigned int width = 800;
 const unsigned int height = 800;
@@ -83,9 +84,6 @@ GLuint indices[] =
 	20,22,23
 };
 
-
-
-
 int main()
 {
 	glfwInit();
@@ -119,10 +117,12 @@ int main()
 	VBO1.Unbind();
 	EBO1.Unbind();
 
-	Texture brickTex("MinecraftGrassBlock.jpg", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
-	brickTex.TextureUnit(shaderProgram, "texture0", 0);
+	Texture blockTexture("MinecraftGrassBlock.jpg", GL_TEXTURE_2D, GL_TEXTURE0, GL_RGBA, GL_UNSIGNED_BYTE);
+	blockTexture.TextureUnit(shaderProgram, "texture0", 0);
 
 	glEnable(GL_DEPTH_TEST);
+
+	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -130,27 +130,13 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		shaderProgram.Activate();
 
-		glm::mat4 model = glm::mat4(1.0f);
-		glm::mat4 view = glm::mat4(1.0f);
-		glm::mat4 projection = glm::mat4(1.0f);
+		camera.Inputs(window);
+		camera.Matrix(45.0f, 0.1f, 100.0f, shaderProgram, "cameraMatrix");
 
-		model = glm::rotate(model, glm::radians(45.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-		view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-		projection = glm::perspective(glm::radians(45.0f), (float)width / height, 0.1f, 100.0f);
-
-		int modelLoc = glGetUniformLocation(shaderProgram.id, "model");
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		
-		int viewLoc = glGetUniformLocation(shaderProgram.id, "view");
-		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		
-		int projLoc = glGetUniformLocation(shaderProgram.id, "projection");
-		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-		brickTex.Bind();
+		blockTexture.Bind();
 		VAO1.Bind();
+
 		glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(int), GL_UNSIGNED_INT, 0);
-		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -160,7 +146,7 @@ int main()
 	VBO1.Delete();
 	EBO1.Delete();
 	
-	brickTex.Delete();
+	blockTexture.Delete();
 	shaderProgram.Delete();
 	
 	glfwDestroyWindow(window);
