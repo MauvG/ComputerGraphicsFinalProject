@@ -1,48 +1,53 @@
 #include"Texture.h"
 
-Texture::Texture(const char* image, GLenum texType, GLuint slot, GLenum format, GLenum pixelType)
+Texture::Texture(const char* image, const char* textureType, GLuint slot)
 {
-	type = texType;
-
+	type = textureType;
 	int imageWidth, imageHeight, imageChannels;
 	stbi_set_flip_vertically_on_load(true);
-	unsigned char* bytes = stbi_load(image, &imageWidth, &imageHeight, &imageChannels, 4);
+	unsigned char* bytes = stbi_load(image, &imageWidth, &imageHeight, &imageChannels, 0);
 
 	glGenTextures(1, &id);
 	glActiveTexture(GL_TEXTURE0 + slot);
 	unit = slot;
-	glBindTexture(texType, id);
+	glBindTexture(GL_TEXTURE_2D, id);
 
-	glTexParameteri(texType, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-	glTexParameteri(texType, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glTexParameteri(texType, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(texType, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glTexImage2D(texType, 0, GL_RGBA, imageWidth, imageHeight, 0, format, pixelType, bytes);
-	glGenerateMipmap(texType);
+	if (imageChannels == 4)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, bytes);
+	else if (imageChannels == 3)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, bytes);
+	else if (imageChannels == 1)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RED, GL_UNSIGNED_BYTE, bytes);
+	else
+		throw std::invalid_argument("Automatic Texture type recognition failed");
 
+	glGenerateMipmap(GL_TEXTURE_2D);
 	stbi_image_free(bytes);
-
-	glBindTexture(texType, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Texture::TextureUnit(Shader& shader, const char* uniform, GLuint unit)
 {
-	GLuint texUni = glGetUniformLocation(shader.id, uniform);
+	GLuint textureUnit = glGetUniformLocation(shader.id, uniform);
 	shader.Activate();
-	glUniform1i(texUni, unit);
+	glUniform1i(textureUnit, unit);
 }
 
 void Texture::Bind()
 {
 	glActiveTexture(GL_TEXTURE0 + unit);
-	glBindTexture(type, id);
+	glBindTexture(GL_TEXTURE_2D, id);
 }
 
 void Texture::Unbind()
 {
-	glBindTexture(type, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Texture::Delete()
