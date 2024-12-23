@@ -34,17 +34,42 @@ int main()
 	glUniform3f(glGetUniformLocation(shaderProgram.id, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
 
 	glEnable(GL_DEPTH_TEST);
-	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
 
+	// Face Culling
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CCW);
+
+	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
+	
 	Model model("Models/MinecraftTree/scene.gltf");
+
+	// FPS Counter
+	double previousTime = 0.0f;
+	double currentTime = 0.0f;
+	double timeDifference = 0.0f;
+	unsigned int counter = 0;
 
 	while (!glfwWindowShouldClose(window))
 	{
+		currentTime = glfwGetTime();
+		timeDifference = currentTime - previousTime;
+		counter++;
+
+		if (timeDifference > 1.0 / 5.0)
+		{
+			std::string fps = std::to_string((1.0 / timeDifference) * counter);
+			std::string newTitle = "ComputerGraphicsFinalProject - " + fps + " FPS";
+			glfwSetWindowTitle(window, newTitle.c_str());
+			previousTime = currentTime;
+			counter = 0;
+		}
+
 		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		camera.Inputs(window);
-		camera.UpdateMatrix(45.0f, 0.1f, 100.0f);
+		camera.UpdateMatrix(45.0f, 0.1f, 1000.0f);
 
 		model.Draw(shaderProgram, camera);
 

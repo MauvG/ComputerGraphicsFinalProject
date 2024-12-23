@@ -232,14 +232,14 @@ std::vector<Texture> Model::getTextures()
 
 		if (!skip)
 		{
-			if (texturePath.find("base") != std::string::npos)
+			if (texturePath.find("base") != std::string::npos || texturePath.find("diffuse") != std::string::npos)
 			{
 				Texture diffuse = Texture((fileDirectory + texturePath).c_str(), "diffuse", loadedTexture.size());
 				textures.push_back(diffuse);
 				loadedTexture.push_back(diffuse);
 				loadedTextureName.push_back(texturePath);
 			}
-			else if (texturePath.find("metallic") != std::string::npos)
+			else if (texturePath.find("metallic") != std::string::npos || texturePath.find("specular") != std::string::npos)
 			{
 				Texture specular = Texture((fileDirectory + texturePath).c_str(), "specular", loadedTexture.size());
 				textures.push_back(specular);
