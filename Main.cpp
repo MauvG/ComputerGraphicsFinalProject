@@ -62,7 +62,22 @@ unsigned int skyboxIndices[] = {
 	22, 23, 20
 };
 
+float groundVertices[] =
+{
+	//  position          // uv                  
+	-1.0f, 0.0f,  1.0f,   0.0f * 1000,  0.0f * 1000,
+	 1.0f, 0.0f,  1.0f,   1.0f * 1000,  0.0f * 1000,
+	-1.0f, 0.0f, -1.0f,   0.0f * 1000,  1.0f * 1000,
+	 1.0f, 0.0f, -1.0f,   1.0f * 1000,  1.0f * 1000,
+};
 
+
+
+
+unsigned int groundIndices[] = {
+	0, 1, 2,
+	2, 3, 1,
+};
 
 int main()
 {
@@ -100,11 +115,11 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 
 	// Face Culling
-	glEnable(GL_CULL_FACE);
+	/*glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	glFrontFace(GL_CCW);
+	glFrontFace(GL_CCW);*/
 
-	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
+	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
 	
 	Model model("Models/MinecraftTree/scene.gltf");
 
@@ -114,6 +129,7 @@ int main()
 	double timeDifference = 0.0f;
 	unsigned int counter = 0;
 
+	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
 	glGenVertexArrays(1, &skyboxVAO);
 	glGenBuffers(1, &skyboxVBO);
@@ -163,6 +179,64 @@ int main()
 		stbi_image_free(data);
 	}
 
+	// Ground
+	unsigned int groundVAO, groundVBO, groundEBO;
+	glGenVertexArrays(1, &groundVAO);
+	glGenBuffers(1, &groundVBO);
+	glGenBuffers(1, &groundEBO);
+
+	glBindVertexArray(groundVAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, groundVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundEBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(groundIndices), groundIndices, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(3);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+
+	// Ground Texture
+	unsigned int groundTexture;
+	glGenTextures(1, &groundTexture);
+	glBindTexture(GL_TEXTURE_2D, groundTexture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	int groundTexWidth, groundTexHeight, groundNrChannels;
+	unsigned char* groundData = stbi_load("Textures/MinecraftGrassBlockTop.jpg",&groundTexWidth, &groundTexHeight, &groundNrChannels, 0);
+	
+	if (groundData)
+	{
+		GLint format = (groundNrChannels == 4) ? GL_RGBA : GL_RGB;
+		glTexImage2D(GL_TEXTURE_2D, 0, format,
+			groundTexWidth, groundTexHeight, 0,
+			format, GL_UNSIGNED_BYTE, groundData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		stbi_image_free(groundData);
+	}
+	else
+	{
+		std::cout << "Failed to load ground texture!" << std::endl;
+		stbi_image_free(groundData);
+	}
+
+	shaderProgram.Activate();
+	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse0"), 0);
+	glUniform1i(glGetUniformLocation(shaderProgram.id, "specular0"), 0);
+
 	while (!glfwWindowShouldClose(window))
 	{
 		currentTime = glfwGetTime();
@@ -184,6 +258,7 @@ int main()
 		camera.Inputs(window);
 		camera.UpdateMatrix(45.0f, 0.1f, 1000.0f);
 
+		// Draw skybox
 		skyboxShader.Activate();
 
 		glm::mat4 skyboxView = glm::mat4(glm::mat3(glm::lookAt(camera.position, camera.position + camera.orientation, camera.up)));
@@ -205,11 +280,29 @@ int main()
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LESS);
 
+		// Active shader
 		shaderProgram.Activate();
-		
+
 		glUniform4f(glGetUniformLocation(shaderProgram.id, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
 		glUniform3f(glGetUniformLocation(shaderProgram.id, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
 
+		// Draw ground
+		glm::mat4 groundModel = glm::mat4(1.0f);
+		groundModel = glm::scale(groundModel, glm::vec3(1000.0f, 1.0f, 1000.0f));
+
+		unsigned int groundModelLoc = glGetUniformLocation(shaderProgram.id, "model");
+		glUniformMatrix4fv(groundModelLoc, 1, GL_FALSE, glm::value_ptr(groundModel));
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, groundTexture);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, groundTexture);
+
+		glBindVertexArray(groundVAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		// Draw model
 		model.Draw(shaderProgram, camera);
 
 		glfwSwapBuffers(window);
