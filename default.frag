@@ -16,7 +16,7 @@ uniform vec3 cameraPosition;
 
 vec4 pointLight()
 {	
-	float ambient = 0.20f;
+	float ambient = 0.50f;
 
 	vec3 lightVector = lightPosition - currentPosition;
 
@@ -42,17 +42,17 @@ vec4 pointLight()
 
 vec4 directLight()
 {
-	float ambient = 0.20f;
+	float ambient = 0.50f;
 
 	vec3 currentNormal = normalize(normal);
-	vec3 lightDirection = normalize(vec3(1.0f, 1.0f, 0.0f));
+	vec3 lightDirection = normalize(vec3(1.0f, -1.0f, 1.0f));
 	float diffuse = max(dot(currentNormal, lightDirection), 0.0f);
 
 	vec3 viewDirection = normalize(cameraPosition - currentPosition);
 	vec3 reflectionDirection = reflect(-lightDirection, currentNormal);
 
 	float specularLight = 0.50f;
-	float specularAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 8);
+	float specularAmount = pow(max(dot(viewDirection, reflectionDirection), 0.0f), 16);
 	float specular = specularAmount * specularLight;
 
 	return (texture(diffuse0, textureCoordinate) * (diffuse + ambient) + texture(specular0, textureCoordinate).r * specular) * lightColor;
@@ -60,5 +60,5 @@ vec4 directLight()
 
 void main()
 {
-	FragColor = pointLight() + directLight(); 
+	FragColor = directLight(); 
 }

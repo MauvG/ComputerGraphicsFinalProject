@@ -62,21 +62,18 @@ unsigned int skyboxIndices[] = {
 	22, 23, 20
 };
 
-float groundVertices[] =
-{
-	//  position          // uv                  
-	-1.0f, 0.0f,  1.0f,   0.0f * 1000,  0.0f * 1000,
-	 1.0f, 0.0f,  1.0f,   1.0f * 1000,  0.0f * 1000,
-	-1.0f, 0.0f, -1.0f,   0.0f * 1000,  1.0f * 1000,
-	 1.0f, 0.0f, -1.0f,   1.0f * 1000,  1.0f * 1000,
+Vertex groundVertices[] =
+{	// Position							  // Colors					   // Normals					// Uvs
+	Vertex{glm::vec3(-1.0f, 0.0f,  1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f * 1000, 0.0f * 1000)},
+	Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(0.0f * 1000, 1.0f * 1000)},
+	Vertex{glm::vec3( 1.0f, 0.0f, -1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f * 1000, 1.0f * 1000)},
+	Vertex{glm::vec3( 1.0f, 0.0f,  1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), glm::vec2(1.0f * 1000, 0.0f * 1000)}
 };
 
-
-
-
-unsigned int groundIndices[] = {
+GLuint groundIndices[] =
+{
 	0, 1, 2,
-	2, 3, 1,
+	0, 2, 3
 };
 
 int main()
@@ -98,36 +95,42 @@ int main()
 	gladLoadGL();
 	glViewport(0, 0, width, height);
 
+	// Shaders
 	Shader shaderProgram("default.vert", "default.frag");
 	Shader skyboxShader("skybox.vert", "skybox.frag");
 
+	// Light settings
 	glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-	glm::vec3 lightPos = glm::vec3(0.5f, 0.5f, 0.5f);
-	glm::mat4 lightModel = glm::mat4(1.0f);
-	lightModel = glm::translate(lightModel, lightPos);
-
+	
+	// Activate shaders
 	shaderProgram.Activate();
 	glUniform4f(glGetUniformLocation(shaderProgram.id, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
-	glUniform3f(glGetUniformLocation(shaderProgram.id, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
-
+	
+	skyboxShader.Activate();
 	glUniform1i(glGetUniformLocation(skyboxShader.id, "skybox"), 0);
 
+	// Enable depth buffer
 	glEnable(GL_DEPTH_TEST);
 
-	// Face Culling
-	/*glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
-	glFrontFace(GL_CCW);*/
-
-	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
+	// Create the camera object
+	Camera camera(width, height, glm::vec3(0.0f, 1.0f, 2.0f));
 	
-	Model model("Models/MinecraftTree/scene.gltf");
+	// Minecraft Tree
+	Model minecraftTree("Models/MinecraftTree/scene.gltf");
 
-	// FPS Counter
-	double previousTime = 0.0f;
-	double currentTime = 0.0f;
-	double timeDifference = 0.0f;
-	unsigned int counter = 0;
+	// Ground Texture
+	Texture groundTextures[]
+	{
+		Texture("Textures/MinecraftGrassBlockTop.jpg", "diffuse", 0),
+		Texture("Textures/MinecraftGrassBlockTop.jpg", "specular", 1)
+	};
+
+	// Ground Mesh
+	std::vector <Vertex> meshGroundVertices(groundVertices, groundVertices + sizeof(groundVertices) / sizeof(Vertex));
+	std::vector <GLuint> meshGroundIndices(groundIndices, groundIndices + sizeof(groundIndices) / sizeof(GLuint));
+	std::vector <Texture> meshGroundTextures(groundTextures, groundTextures + sizeof(groundTextures) / sizeof(Texture));
+	Mesh ground(meshGroundVertices, meshGroundIndices, meshGroundTextures);
+	glm::mat4 groundModel = glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f, 1.0f, 1000.0f));
 
 	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -179,66 +182,16 @@ int main()
 		stbi_image_free(data);
 	}
 
-	// Ground
-	unsigned int groundVAO, groundVBO, groundEBO;
-	glGenVertexArrays(1, &groundVAO);
-	glGenBuffers(1, &groundVBO);
-	glGenBuffers(1, &groundEBO);
+	// FPS Counter
+	double previousTime = 0.0f;
+	double currentTime = 0.0f;
+	double timeDifference = 0.0f;
+	unsigned int counter = 0;
 
-	glBindVertexArray(groundVAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, groundVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundEBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(groundIndices), groundIndices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(3);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-
-
-	// Ground Texture
-	unsigned int groundTexture;
-	glGenTextures(1, &groundTexture);
-	glBindTexture(GL_TEXTURE_2D, groundTexture);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	int groundTexWidth, groundTexHeight, groundNrChannels;
-	unsigned char* groundData = stbi_load("Textures/MinecraftGrassBlockTop.jpg",&groundTexWidth, &groundTexHeight, &groundNrChannels, 0);
-	
-	if (groundData)
-	{
-		GLint format = (groundNrChannels == 4) ? GL_RGBA : GL_RGB;
-		glTexImage2D(GL_TEXTURE_2D, 0, format,
-			groundTexWidth, groundTexHeight, 0,
-			format, GL_UNSIGNED_BYTE, groundData);
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		stbi_image_free(groundData);
-	}
-	else
-	{
-		std::cout << "Failed to load ground texture!" << std::endl;
-		stbi_image_free(groundData);
-	}
-
-	shaderProgram.Activate();
-	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse0"), 0);
-	glUniform1i(glGetUniformLocation(shaderProgram.id, "specular0"), 0);
-
+	// Main loop
 	while (!glfwWindowShouldClose(window))
 	{
+		// Count fps
 		currentTime = glfwGetTime();
 		timeDifference = currentTime - previousTime;
 		counter++;
@@ -251,10 +204,12 @@ int main()
 			previousTime = currentTime;
 			counter = 0;
 		}
-
-		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+			
+		// Clear back buffer and depth buffer
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// Camera controls
 		camera.Inputs(window);
 		camera.UpdateMatrix(45.0f, 0.1f, 1000.0f);
 
@@ -279,31 +234,12 @@ int main()
 
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LESS);
-
-		// Active shader
-		shaderProgram.Activate();
-
-		glUniform4f(glGetUniformLocation(shaderProgram.id, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
-		glUniform3f(glGetUniformLocation(shaderProgram.id, "lightPosition"), lightPos.x, lightPos.y, lightPos.z);
-
+	
 		// Draw ground
-		glm::mat4 groundModel = glm::mat4(1.0f);
-		groundModel = glm::scale(groundModel, glm::vec3(1000.0f, 1.0f, 1000.0f));
-
-		unsigned int groundModelLoc = glGetUniformLocation(shaderProgram.id, "model");
-		glUniformMatrix4fv(groundModelLoc, 1, GL_FALSE, glm::value_ptr(groundModel));
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, groundTexture);
-
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, groundTexture);
-
-		glBindVertexArray(groundVAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		ground.Draw(shaderProgram, camera, groundModel);
 
 		// Draw model
-		model.Draw(shaderProgram, camera);
+		minecraftTree.Draw(shaderProgram, camera);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -311,6 +247,7 @@ int main()
 
 	// Clean up
 	shaderProgram.Delete();
+	skyboxShader.Delete();
 
 	glfwDestroyWindow(window);
 	glfwTerminate();

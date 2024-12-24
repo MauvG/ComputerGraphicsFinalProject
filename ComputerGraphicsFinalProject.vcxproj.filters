@@ -94,6 +94,12 @@
     <None Include="skybox.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="shadowMap.frag">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
+    <None Include="shadowMap.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Textures\MinecraftGrassBlock.jpg">
