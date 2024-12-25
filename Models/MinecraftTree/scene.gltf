@@ -155,7 +155,7 @@
       "uri": "textures/Oak_Leaves_baseColor.png"
     },
     {
-      "uri": "textures/Oak_Leaves_emissive.png"
+      "uri": "textures/Oak_Leaves_metallicRoughness.png"
     }
   ],
   "materials": [
