@@ -94,6 +94,7 @@ std::vector<Vertex> generateTerrainVertices(unsigned int width, unsigned int hei
 			v.normal = glm::vec3(0.0f, 1.0f, 0.0f);
 			v.color = glm::vec3(0.5f, 0.8f, 0.3f);
 			v.textureUV = glm::vec2( ((float)x / (float)(width - 1)) * 100, ((float)z / (float)(height - 1)) * 100);
+			v.height = terrainHeight;
 
 			vertices.push_back(v);
 		}
@@ -201,10 +202,35 @@ int main()
 	std::vector<Vertex> terrainVerts = generateTerrainVertices(terrainWidth, terrainHeight, cellSize, noiseScale);
 	std::vector<GLuint> terrainInds = generateTerrainIndices(terrainWidth, terrainHeight);
 
-	std::vector<Texture> terrainTextures {
+	/*std::vector<Texture> terrainTextures {
 		Texture("Textures/MinecraftGrassBlockTop.jpg", "diffuse", 0),
 		Texture("Textures/MinecraftGrassBlockTop.jpg", "specular", 1)
+	};*/
+
+	std::vector<Texture> terrainTextures{
+		Texture("Textures/GrassDiffuse.jpg", "diffuse", 0),
+		Texture("Textures/GrassDiffuse.jpg", "diffuse", 1),
+		Texture("Textures/MudDiffuse.jpg", "diffuse", 2),
+		Texture("Textures/RockDiffuse.jpg", "diffuse", 3)
 	};
+
+	shaderProgram.Activate();
+	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse0"), 0); // Grass
+	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse1"), 1); // Mud
+	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse2"), 2); // Rock
+	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse3"), 3); // Snow
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, terrainTextures[0].id);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, terrainTextures[1].id);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, terrainTextures[2].id);
+
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, terrainTextures[3].id);
 
 	Mesh terrainMesh(terrainVerts, terrainInds, terrainTextures);
 

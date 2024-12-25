@@ -11,6 +11,7 @@ struct Vertex
 	glm::vec3 normal;
 	glm::vec3 color;
 	glm::vec2 textureUV;
+	float height;
 };
 
 class VBO
