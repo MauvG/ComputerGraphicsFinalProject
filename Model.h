@@ -11,7 +11,7 @@ class Model
 public:
 	Model(const char* file);
 
-	void Draw(Shader& shader, Camera& camera, glm::vec3 position);
+	void Draw(Shader& shader, Camera& camera, glm::vec3 translation, glm::quat rotation, glm::vec3 scale);
 
 private:
 	const char* file;

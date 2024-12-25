@@ -3,6 +3,7 @@
 // Reads a text file and outputs a string with everything in the text file
 std::string get_file_contents(const char* filename)
 {
+	//std::cout << "Trying to open file: " << filename << std::endl; // <-- DEBUG
 	std::ifstream in(filename, std::ios::binary);
 	if (in)
 	{

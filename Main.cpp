@@ -1,4 +1,8 @@
 #include"Model.h"
+#include <glm/glm.hpp>
+#include <cmath>
+#include <vector>
+#include <FastNoiseLite/FastNoiseLite.h>
 
 const unsigned int width = 1920;
 const unsigned int height = 1080;
@@ -65,21 +69,64 @@ unsigned int skyboxIndices[] = {
 	22, 23, 20
 };
 
-Vertex groundVertices[] =
+std::vector<Vertex> generateTerrainVertices(unsigned int width, unsigned int height, float scale, float noiseScale)
 {
-	// position							  color            normal						uv
-	Vertex{glm::vec3(-1.0f, 0.0f,  1.0f), glm::vec3(1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f * 1000, 0.0f * 1000)},
-	Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(0.0f * 1000, 1.0f * 1000)},
-	Vertex{glm::vec3( 1.0f, 0.0f, -1.0f), glm::vec3(1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f * 1000, 1.0f * 1000)},
-	Vertex{glm::vec3( 1.0f, 0.0f,  1.0f), glm::vec3(1.0f), glm::vec3(0.0f, 1.0f, 0.0f), glm::vec2(1.0f * 1000, 0.0f * 1000)}
-};
+	std::vector<Vertex> vertices;
+	vertices.reserve(width * height);
 
+	FastNoiseLite noise;
+	noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+	noise.SetFrequency(0.01f);
 
-GLuint groundIndices[] =
+	for (unsigned int z = 0; z < height; z++)
+	{
+		for (unsigned int x = 0; x < width; x++)
+		{
+			float worldX = x * scale;
+			float worldZ = z * scale;
+
+			float noiseVal = noise.GetNoise((float)x * noiseScale, (float)z * noiseScale);
+			noiseVal = (noiseVal + 1.0f) * 0.5f;
+			float terrainHeight = noiseVal * 100.0f;
+
+			Vertex v;
+			v.position = glm::vec3(worldX, terrainHeight, worldZ);
+			v.normal = glm::vec3(0.0f, 1.0f, 0.0f);
+			v.color = glm::vec3(0.5f, 0.8f, 0.3f);
+			v.textureUV = glm::vec2( ((float)x / (float)(width - 1)) * 100, ((float)z / (float)(height - 1)) * 100);
+
+			vertices.push_back(v);
+		}
+	}
+
+	return vertices;
+}
+
+std::vector<GLuint> generateTerrainIndices(unsigned int width, unsigned int height)
 {
-	0, 1, 2,
-	0, 2, 3
-};
+	std::vector<GLuint> indices;
+	indices.reserve((width - 1) * (height - 1) * 6);
+
+	for (unsigned int z = 0; z < height - 1; z++)
+	{
+		for (unsigned int x = 0; x < width - 1; x++)
+		{
+			GLuint topLeft = z * width + x;
+			GLuint topRight = z * width + (x + 1);
+			GLuint bottomLeft = (z + 1) * width + x;
+			GLuint bottomRight = (z + 1) * width + (x + 1);
+
+			indices.push_back(topLeft);
+			indices.push_back(bottomLeft);
+			indices.push_back(topRight);
+
+			indices.push_back(topRight);
+			indices.push_back(bottomLeft);
+			indices.push_back(bottomRight);
+		}
+	}
+	return indices;
+}
 
 float rectangleVertices[] =
 {
@@ -140,23 +187,40 @@ int main()
 
 	// Create the camera object
 	Camera camera(width, height, glm::vec3(0.0f, 1.0f, 2.0f));
-	
-	// Minecraft Tree
-	Model minecraftTree("Models/MinecraftTree/scene.gltf");
 
-	// Ground Texture
-	Texture groundTextures[]
-	{
+
+	// Low poly tree
+	Model tree("Models/MinecraftTree/scene.gltf");
+
+	// Terrain generation
+	unsigned int terrainWidth = 1000;   	
+	unsigned int terrainHeight = 1000;
+	float cellSize = 1.0f;
+	float noiseScale = 1.0f;
+
+	std::vector<Vertex> terrainVerts = generateTerrainVertices(terrainWidth, terrainHeight, cellSize, noiseScale);
+	std::vector<GLuint> terrainInds = generateTerrainIndices(terrainWidth, terrainHeight);
+
+	std::vector<Texture> terrainTextures {
 		Texture("Textures/MinecraftGrassBlockTop.jpg", "diffuse", 0),
 		Texture("Textures/MinecraftGrassBlockTop.jpg", "specular", 1)
 	};
 
-	// Ground Mesh
-	std::vector <Vertex> meshGroundVertices(groundVertices, groundVertices + sizeof(groundVertices) / sizeof(Vertex));
-	std::vector <GLuint> meshGroundIndices(groundIndices, groundIndices + sizeof(groundIndices) / sizeof(GLuint));
-	std::vector <Texture> meshGroundTextures(groundTextures, groundTextures + sizeof(groundTextures) / sizeof(Texture));
-	Mesh ground(meshGroundVertices, meshGroundIndices, meshGroundTextures);
-	glm::mat4 groundModel = glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f, 1.0f, 1000.0f));
+	Mesh terrainMesh(terrainVerts, terrainInds, terrainTextures);
+
+	Mesh infiniteTerrain = terrainMesh;
+	int scaleFactor = 100;
+	glm::vec3 terrainScale = glm::vec3(1.0f * scaleFactor, 1.0f * (scaleFactor / 2), 1.0f * scaleFactor);
+
+	glm::vec3 cameraStart = camera.position;
+	//glm::vec3 terrainTranslation = glm::vec3(cameraStart.x - 1.0f * terrainScale.x * terrainWidth, 0.0f, cameraStart.z - 0.5f * terrainScale.z * terrainHeight);
+	glm::vec3 terrainTranslation = glm::vec3(-1.0f * ((terrainWidth * scaleFactor) / 2), -1.0f * scaleFactor * 20, -1.0f * ((terrainHeight * scaleFactor) / 2));
+
+
+	glm::mat4 terrainModel = glm::mat4(1.0f);
+	terrainModel = glm::translate(terrainModel, terrainTranslation);
+	terrainModel = glm::scale(terrainModel, terrainScale);
+
 
 	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -300,6 +364,7 @@ int main()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glm::mat4 orthgonalProjection = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+	//glm::mat4 orthgonalProjection = glm::ortho(-3500.0f, 3500.0f, -3500.0f, 3500.0f, 0.1f, 750.0f);
 	glm::mat4 lightView = glm::lookAt(20.0f * lightPosition, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 lightProjection = orthgonalProjection * lightView;
 
@@ -340,16 +405,20 @@ int main()
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 		glEnable(GL_CULL_FACE);
-		glCullFace(GL_FRONT);
-
-		glEnable(GL_POLYGON_OFFSET_FILL);
-		glPolygonOffset(4.0f, 4.0f);
+		glCullFace(GL_BACK);
 
 		// Draw scene for shadow map
-		minecraftTree.Draw(shadowMapProgram, camera, glm::vec3(0.0f, 0.0f, 0.0f));
-		ground.Draw(shadowMapProgram, camera);
+		glm::vec3 treeTranslation = glm::vec3(0.0f, 0.0f, -0.4f);
+		glm::quat treeRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+		glm::vec3 treeScale = glm::vec3(1.0f, 1.0f, 1.0f);
+		tree.Draw(shadowMapProgram, camera, treeTranslation, treeRotation, treeScale);
 
-		glDisable(GL_POLYGON_OFFSET_FILL);
+		
+		//ground.Draw(shadowMapProgram, camera);
+		infiniteTerrain.Draw(shadowMapProgram, camera, terrainModel);
+
+
+
 		glDisable(GL_CULL_FACE);
 
 		// Switch back to the default 
@@ -361,8 +430,8 @@ int main()
 		glEnable(GL_DEPTH_TEST);
 
 		// Camera controls
-		camera.Inputs(window);
-		camera.UpdateMatrix(45.0f, 0.1f, 1000.0f);
+		camera.Inputs(window); 
+		camera.UpdateMatrix(45.0f, 0.1f, 100000.0f);
 		
 		// Shadows
 		shaderProgram.Activate();
@@ -394,12 +463,25 @@ int main()
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LESS);
 	
+
+
 		// Draw ground
-		ground.Draw(shaderProgram, camera, groundModel);
+		//ground.Draw(shaderProgram, camera, groundModel);
+		infiniteTerrain.Draw(shaderProgram, camera, terrainModel);
+
+
+
+
+
+
+
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
 
 		// Draw model
-		minecraftTree.Draw(shaderProgram, camera, glm::vec3(0.0f, 0.0f, 0.0f));
+		tree.Draw(shaderProgram, camera, treeTranslation, treeRotation, treeScale);
 
+		glDisable(GL_CULL_FACE);
 		
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, FBO);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcessingFBO);
