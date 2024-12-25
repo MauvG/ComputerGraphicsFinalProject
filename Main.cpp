@@ -437,7 +437,7 @@ int main()
 		glm::vec3 treeTranslation = glm::vec3(0.0f, 0.0f, -0.4f);
 		glm::quat treeRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 		glm::vec3 treeScale = glm::vec3(1.0f, 1.0f, 1.0f);
-		tree.Draw(shadowMapProgram, camera, treeTranslation, treeRotation, treeScale);
+		tree.Draw(shadowMapProgram, camera);
 
 		
 		//ground.Draw(shadowMapProgram, camera);
@@ -505,7 +505,7 @@ int main()
 		glCullFace(GL_BACK);
 
 		// Draw model
-		tree.Draw(shaderProgram, camera, treeTranslation, treeRotation, treeScale);
+		tree.Draw(shaderProgram, camera);
 
 		glDisable(GL_CULL_FACE);
 		
