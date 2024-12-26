@@ -191,21 +191,16 @@ int main()
 
 
 	// Low poly tree
-	Model tree("Models/MinecraftTree/scene.gltf");
+	Model tree("Models/MyTree/scene.gltf");
 
 	// Terrain generation
 	unsigned int terrainWidth = 1000;   	
 	unsigned int terrainHeight = 1000;
 	float cellSize = 1.0f;
-	float noiseScale = 1.0f;
+	float noiseScale = 0.5f;
 
 	std::vector<Vertex> terrainVerts = generateTerrainVertices(terrainWidth, terrainHeight, cellSize, noiseScale);
 	std::vector<GLuint> terrainInds = generateTerrainIndices(terrainWidth, terrainHeight);
-
-	/*std::vector<Texture> terrainTextures {
-		Texture("Textures/MinecraftGrassBlockTop.jpg", "diffuse", 0),
-		Texture("Textures/MinecraftGrassBlockTop.jpg", "specular", 1)
-	};*/
 
 	std::vector<Texture> terrainTextures{
 		Texture("Textures/GrassDiffuse.jpg", "diffuse", 0),
@@ -235,18 +230,12 @@ int main()
 	Mesh terrainMesh(terrainVerts, terrainInds, terrainTextures);
 
 	Mesh infiniteTerrain = terrainMesh;
-	int scaleFactor = 100;
-	glm::vec3 terrainScale = glm::vec3(1.0f * scaleFactor, 1.0f * (scaleFactor / 2), 1.0f * scaleFactor);
 
 	glm::vec3 cameraStart = camera.position;
-	//glm::vec3 terrainTranslation = glm::vec3(cameraStart.x - 1.0f * terrainScale.x * terrainWidth, 0.0f, cameraStart.z - 0.5f * terrainScale.z * terrainHeight);
-	glm::vec3 terrainTranslation = glm::vec3(-1.0f * ((terrainWidth * scaleFactor) / 2), -1.0f * scaleFactor * 20, -1.0f * ((terrainHeight * scaleFactor) / 2));
-
+	glm::vec3 terrainTranslation = glm::vec3(-1.0f * (terrainWidth / 2), -1.0f * 25, -1.0f * (terrainHeight / 2));
 
 	glm::mat4 terrainModel = glm::mat4(1.0f);
 	terrainModel = glm::translate(terrainModel, terrainTranslation);
-	terrainModel = glm::scale(terrainModel, terrainScale);
-
 
 	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
