@@ -1,14 +1,18 @@
-#include"Model.h"
+#include "Model.h"
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp> 
+#include <glm/gtc/type_ptr.hpp>
 #include <cmath>
 #include <vector>
-#include <FastNoiseLite/FastNoiseLite.h>
+#include <fastnoiselite/fast_noise_lite.h>
+#include <random>
+#include <iostream>
 
 const unsigned int width = 1920;
 const unsigned int height = 1080;
 
 unsigned int samples = 8;
-float gamma = 1.5f;
+float gamma = 3.0f;
 
 float skyboxVertices[] = {
 	// front
@@ -29,23 +33,23 @@ float skyboxVertices[] = {
 	-1.0f, -1.0f, -1.0f,   2.0f / 4.0f,   1.002f / 3.0f,
 	 1.0f, -1.0f, -1.0f,   3.0f / 4.0f,   1.002f / 3.0f,
 
-	// right
-	1.0f,  1.0f,  1.0f,   1.0f,          1.998f / 3.0f,
-	1.0f,  1.0f, -1.0f,   3.0f / 4.0f,   1.998f / 3.0f,
-	1.0f, -1.0f, -1.0f,   3.0f / 4.0f,   1.002f / 3.0f,
-	1.0f, -1.0f,  1.0f,   1.0f,          1.002f / 3.0f,
+	 // right
+	 1.0f,  1.0f,  1.0f,   1.0f,          1.998f / 3.0f,
+	 1.0f,  1.0f, -1.0f,   3.0f / 4.0f,   1.998f / 3.0f,
+	 1.0f, -1.0f, -1.0f,   3.0f / 4.0f,   1.002f / 3.0f,
+	 1.0f, -1.0f,  1.0f,   1.0f,          1.002f / 3.0f,
 
-	// bottom
-	-1.0f,  1.0f, -1.0f,   1.998f / 4.0f, 2.0f   / 3.0f,
-	 1.0f,  1.0f, -1.0f,   1.998f / 4.0f, 2.998f / 3.0f,
-	 1.0f,  1.0f,  1.0f,   1.002f / 4.0f, 2.998f / 3.0f,
-	-1.0f,  1.0f,  1.0f,   1.002f / 4.0f, 2.0f   / 3.0f,
+	 // bottom
+	 -1.0f,  1.0f, -1.0f,   1.998f / 4.0f, 2.0f / 3.0f,
+	  1.0f,  1.0f, -1.0f,   1.998f / 4.0f, 2.998f / 3.0f,
+	  1.0f,  1.0f,  1.0f,   1.002f / 4.0f, 2.998f / 3.0f,
+	 -1.0f,  1.0f,  1.0f,   1.002f / 4.0f, 2.0f / 3.0f,
 
-	// top
-	-1.0f, -1.0f,  1.0f,   1.002f / 4.0f, 1.0f   / 3.0f,
-	 1.0f, -1.0f,  1.0f,   1.002f / 4.0f, 0.002f / 3.0f,
-	 1.0f, -1.0f, -1.0f,   1.998f / 4.0f, 0.002f / 3.0f,
-	-1.0f, -1.0f, -1.0f,   1.998f / 4.0f, 1.0f   / 3.0f
+	 // top
+	 -1.0f, -1.0f,  1.0f,   1.002f / 4.0f, 1.0f / 3.0f,
+	  1.0f, -1.0f,  1.0f,   1.002f / 4.0f, 0.002f / 3.0f,
+	  1.0f, -1.0f, -1.0f,   1.998f / 4.0f, 0.002f / 3.0f,
+	 -1.0f, -1.0f, -1.0f,   1.998f / 4.0f, 1.0f / 3.0f
 };
 
 unsigned int skyboxIndices[] = {
@@ -69,6 +73,18 @@ unsigned int skyboxIndices[] = {
 	22, 23, 20
 };
 
+float rectangleVertices[] =
+{
+	// Poisiton    // UVs
+	 1.0f, -1.0f,  1.0f, 0.0f,
+	-1.0f, -1.0f,  0.0f, 0.0f,
+	-1.0f,  1.0f,  0.0f, 1.0f,
+
+	 1.0f,  1.0f,  1.0f, 1.0f,
+	 1.0f, -1.0f,  1.0f, 0.0f,
+	-1.0f,  1.0f,  0.0f, 1.0f
+};
+
 std::vector<Vertex> generateTerrainVertices(unsigned int width, unsigned int height, float scale, float noiseScale)
 {
 	std::vector<Vertex> vertices;
@@ -85,7 +101,7 @@ std::vector<Vertex> generateTerrainVertices(unsigned int width, unsigned int hei
 			float worldX = x * scale;
 			float worldZ = z * scale;
 
-			float noiseVal = noise.GetNoise((float)x * noiseScale, (float)z * noiseScale);
+			float noiseVal = noise.GetNoise((float) x * noiseScale, (float) z * noiseScale);
 			noiseVal = (noiseVal + 1.0f) * 0.5f;
 			float terrainHeight = noiseVal * 100.0f;
 
@@ -93,7 +109,7 @@ std::vector<Vertex> generateTerrainVertices(unsigned int width, unsigned int hei
 			v.position = glm::vec3(worldX, terrainHeight, worldZ);
 			v.normal = glm::vec3(0.0f, 1.0f, 0.0f);
 			v.color = glm::vec3(0.5f, 0.8f, 0.3f);
-			v.textureUV = glm::vec2( ((float)x / (float)(width - 1)) * 100, ((float)z / (float)(height - 1)) * 100);
+			v.textureUV = glm::vec2(((float)x / (float)(width - 1)) * 100, ((float) z / (float)(height - 1)) * 100);
 			v.height = terrainHeight;
 
 			vertices.push_back(v);
@@ -129,17 +145,6 @@ std::vector<GLuint> generateTerrainIndices(unsigned int width, unsigned int heig
 	return indices;
 }
 
-float rectangleVertices[] =
-{
-	// Poisiton    // UVs
-	 1.0f, -1.0f,  1.0f, 0.0f,
-	-1.0f, -1.0f,  0.0f, 0.0f,
-	-1.0f,  1.0f,  0.0f, 1.0f,
-
-	 1.0f,  1.0f,  1.0f, 1.0f,
-	 1.0f, -1.0f,  1.0f, 0.0f,
-	-1.0f,  1.0f,  0.0f, 1.0f
-};
 
 int main()
 {
@@ -152,6 +157,7 @@ int main()
 	GLFWwindow* window = glfwCreateWindow(width, height, "ComputerGraphicsFinalProject", NULL, NULL);
 	if (window == NULL)
 	{
+		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
 		return -1;
 	}
@@ -160,82 +166,80 @@ int main()
 	gladLoadGL();
 	glViewport(0, 0, width, height);
 
-	// Shaders
 	Shader shaderProgram("default.vert", "default.frag");
 	Shader skyboxShader("skybox.vert", "skybox.frag");
 	Shader framebufferProgram("framebuffer.vert", "framebuffer.frag");
 	Shader shadowMapProgram("shadowMap.vert", "shadowMap.frag");
 
-	// Light settings
 	glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 lightPosition = glm::vec3(0.5f, 0.5f, 0.5f);
 
-
-	// Activate shaders
 	shaderProgram.Activate();
 	glUniform4f(glGetUniformLocation(shaderProgram.id, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
 	glUniform3f(glGetUniformLocation(shaderProgram.id, "lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
-
+	
 	skyboxShader.Activate();
 	glUniform1i(glGetUniformLocation(skyboxShader.id, "skybox"), 0);
-
+	
 	framebufferProgram.Activate();
 	glUniform1i(glGetUniformLocation(framebufferProgram.id, "screenTexture"), 0);
 	glUniform1f(glGetUniformLocation(framebufferProgram.id, "gamma"), gamma);
 
-	// Enable depth buffer
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_MULTISAMPLE);
 
-	// Create the camera object
-	Camera camera(width, height, glm::vec3(0.0f, 1.0f, 2.0f));
+	// Scene
 
-
-	// Low poly tree
-	Model tree("Models/MyTree/scene.gltf");
-
+	// Creates camera object
+	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
+	
 	// Terrain generation
-	unsigned int terrainWidth = 1000;   	
-	unsigned int terrainHeight = 1000;
+	unsigned int terrainSize = 1000;
 	float cellSize = 1.0f;
 	float noiseScale = 0.5f;
 
-	std::vector<Vertex> terrainVerts = generateTerrainVertices(terrainWidth, terrainHeight, cellSize, noiseScale);
-	std::vector<GLuint> terrainInds = generateTerrainIndices(terrainWidth, terrainHeight);
+	std::vector<Vertex> terrainVertices = generateTerrainVertices(terrainSize, terrainSize, cellSize, noiseScale);
+	std::vector<GLuint> terrainIndices = generateTerrainIndices(terrainSize, terrainSize);
+	std::vector<Texture> terrainTextures{Texture("Textures/GrassDiffuse.jpg", "diffuse", 0)};
 
-	std::vector<Texture> terrainTextures{
-		Texture("Textures/GrassDiffuse.jpg", "diffuse", 0),
-		Texture("Textures/GrassDiffuse.jpg", "diffuse", 1),
-		Texture("Textures/MudDiffuse.jpg", "diffuse", 2),
-		Texture("Textures/RockDiffuse.jpg", "diffuse", 3)
-	};
+	Mesh terrainMesh(terrainVertices, terrainIndices, terrainTextures);
+	glm::mat4 terrainModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f * (terrainSize / 2), -50.0f, -1.0f * (terrainSize / 2)));
 
-	shaderProgram.Activate();
-	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse0"), 0); // Grass
-	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse1"), 1); // Mud
-	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse2"), 2); // Rock
-	glUniform1i(glGetUniformLocation(shaderProgram.id, "diffuse3"), 3); // Snow
+	// Add tree models
+	Model tree("Models/MyTree/scene.gltf");
+	float treeYOffset = -47.5f;
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, terrainTextures[0].id);
+	int numberOfTrees = 5000;
+	std::vector<glm::vec3> treePositions;
+	treePositions.reserve(numberOfTrees);
 
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, terrainTextures[1].id);
+	std::mt19937 randomNumberGenerator;
+	randomNumberGenerator.seed(std::random_device()());
+	std::uniform_real_distribution<float> distX(0.0f, terrainSize * cellSize);
+	std::uniform_real_distribution<float> distZ(0.0f, terrainSize * cellSize);
 
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, terrainTextures[2].id);
+	for (int i = 0; i < numberOfTrees; ++i)
+	{
+		float x = distX(randomNumberGenerator);
+		float z = distZ(randomNumberGenerator);
 
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, terrainTextures[3].id);
+		float gridX = x / cellSize;
+		float gridZ = z / cellSize;
 
-	Mesh terrainMesh(terrainVerts, terrainInds, terrainTextures);
+		int ix = static_cast<int>(round(gridX));
+		int iz = static_cast<int>(round(gridZ));
 
-	Mesh infiniteTerrain = terrainMesh;
+		ix = glm::clamp(ix, 0, static_cast<int>(terrainSize - 1));
+		iz = glm::clamp(iz, 0, static_cast<int>(terrainSize - 1));
 
-	glm::vec3 cameraStart = camera.position;
-	glm::vec3 terrainTranslation = glm::vec3(-1.0f * (terrainWidth / 2), -1.0f * 25, -1.0f * (terrainHeight / 2));
+		float heightVal = terrainVertices[iz * terrainSize + ix].position.y;
 
-	glm::mat4 terrainModel = glm::mat4(1.0f);
-	terrainModel = glm::translate(terrainModel, terrainTranslation);
+		float worldX = x + (-1.0f * (terrainSize / 2));
+		float worldZ = z + (-1.0f * (terrainSize / 2));
+		float worldY = heightVal + treeYOffset;
+
+		treePositions.emplace_back(glm::vec3(worldX, worldY, worldZ));
+	}
 
 	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -271,7 +275,7 @@ int main()
 
 	int texWidth, texHeight, nrChannels;
 	unsigned char* data = stbi_load("Textures/Skybox.png", &texWidth, &texHeight, &nrChannels, 0);
-	
+
 	if (data)
 	{
 		stbi_set_flip_vertically_on_load(false);
@@ -283,25 +287,21 @@ int main()
 	}
 	else
 	{
-		std::cout << "Failed to load cross texture!" << std::endl;
+		std::cout << "Failed to load skybox texture!" << std::endl;
 		stbi_image_free(data);
 	}
 
-	// Create framebuffer
+	// Create Frame Buffer Object
 	unsigned int rectangleVAO, rectangleVBO;
-	
 	glGenVertexArrays(1, &rectangleVAO);
 	glGenBuffers(1, &rectangleVBO);
 	glBindVertexArray(rectangleVAO);
-
 	glBindBuffer(GL_ARRAY_BUFFER, rectangleVBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(rectangleVertices), &rectangleVertices, GL_STATIC_DRAW);
-
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*) 0);
-
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*) (2 * sizeof(float)));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
 	unsigned int FBO;
 	glGenFramebuffers(1, &FBO);
@@ -311,20 +311,18 @@ int main()
 	glGenTextures(1, &framebufferTexture);
 	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, framebufferTexture);
 	glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGB16F, width, height, GL_TRUE);
-	
 	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); 
 	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, framebufferTexture, 0);
 
+	// Create Render Buffer Object
 	unsigned int RBO;
 	glGenRenderbuffers(1, &RBO);
 	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
 	glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
-
 
 	auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 	if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
@@ -337,13 +335,11 @@ int main()
 	unsigned int postProcessingTexture;
 	glGenTextures(1, &postProcessingTexture);
 	glBindTexture(GL_TEXTURE_2D, postProcessingTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, postProcessingTexture, 0);
 
 	fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -351,20 +347,17 @@ int main()
 		std::cout << "Post-Processing Framebuffer error: " << fboStatus << std::endl;
 
 
-	// Add Shadows
+	// Shadows
 	unsigned int shadowMapFBO;
 	glGenFramebuffers(1, &shadowMapFBO);
 
 	unsigned int shadowMapWidth = 8192, shadowMapHeight = 8192;
 	unsigned int shadowMap;
-	
 	glGenTextures(1, &shadowMap);
 	glBindTexture(GL_TEXTURE_2D, shadowMap);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowMapWidth, shadowMapHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	
@@ -378,80 +371,72 @@ int main()
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+	// Light for shadow
 	glm::mat4 orthgonalProjection = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
-	//glm::mat4 orthgonalProjection = glm::ortho(-3500.0f, 3500.0f, -3500.0f, 3500.0f, 0.1f, 750.0f);
+	//glm::mat4 orthgonalProjection = glm::ortho(-500.0f, 500.0f, -500.0f, 500.0f, 0.1f, 75.0f);
 	glm::mat4 lightView = glm::lookAt(20.0f * lightPosition, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 lightProjection = orthgonalProjection * lightView;
 
 	shadowMapProgram.Activate();
 	glUniformMatrix4fv(glGetUniformLocation(shadowMapProgram.id, "lightProjection"), 1, GL_FALSE, glm::value_ptr(lightProjection));
 
-	// FPS Counter
-	double previousTime = 0.0f;
-	double currentTime = 0.0f;
-	double timeDifference = 0.0f;
+	// Fps counter
+	double previousTime = 0.0;
+	double currentTime = 0.0;
+	double timeDifference;
 	unsigned int counter = 0;
 
-
-
-	// Main loop
+	// Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
-		// Count fps
+		
 		currentTime = glfwGetTime();
 		timeDifference = currentTime - previousTime;
 		counter++;
-		
-		if (timeDifference > 1.0 / 5.0)
+
+		if (timeDifference >= 1.0 / 5.0)
 		{
-			std::string fps = std::to_string((1.0 / timeDifference) * counter);
-			std::string newTitle = "ComputerGraphicsFinalProject - " + fps + " FPS";
+			std::string FPS = std::to_string((1.0 / timeDifference) * counter);
+			std::string newTitle = "ComputerGraphicsFinalProject - " + FPS + "FPS";
 			glfwSetWindowTitle(window, newTitle.c_str());
+
 			previousTime = currentTime;
 			counter = 0;
 		}
-			
-		
-		// Shadows
+
+		// Depth testing needed for Shadow Map
 		glEnable(GL_DEPTH_TEST);
 
 		glViewport(0, 0, shadowMapWidth, shadowMapHeight);
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-
 		// Draw scene for shadow map
-		glm::vec3 treeTranslation = glm::vec3(0.0f, 0.0f, -0.4f);
-		glm::quat treeRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-		glm::vec3 treeScale = glm::vec3(1.0f, 1.0f, 1.0f);
-		tree.Draw(shadowMapProgram, camera);
-
+		for (const auto& position : treePositions)
+		{			
+			glm::mat4 treeModel = glm::translate(glm::mat4(1.0f), position);
+			tree.Draw(shadowMapProgram, camera, treeModel);
+		}
 		
-		//ground.Draw(shadowMapProgram, camera);
-		infiniteTerrain.Draw(shadowMapProgram, camera, terrainModel);
+		terrainMesh.Draw(shadowMapProgram, camera, terrainModel);
 
-
-
-		glDisable(GL_CULL_FACE);
-
-		// Switch back to the default 
+		// Switch back to the default
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, width, height);
 		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClearColor(pow(0.07f, gamma), pow(0.13f, gamma), pow(0.17f, gamma), 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 
-		// Camera controls
-		camera.Inputs(window); 
-		camera.UpdateMatrix(45.0f, 0.1f, 100000.0f);
-		
-		// Shadows
+		// Handles camera
+		camera.Inputs(window);
+		camera.UpdateMatrix(45.0f, 0.1f, 1000.0f);
+
+		// Send the light matrix to the shader
 		shaderProgram.Activate();
 		glUniformMatrix4fv(glGetUniformLocation(shaderProgram.id, "lightProjection"), 1, GL_FALSE, glm::value_ptr(lightProjection));
 
+		// Bind the Shadow Map
 		glActiveTexture(GL_TEXTURE0 + 2);
 		glBindTexture(GL_TEXTURE_2D, shadowMap);
 		glUniform1i(glGetUniformLocation(shaderProgram.id, "shadowMap"), 2);
@@ -460,7 +445,7 @@ int main()
 		skyboxShader.Activate();
 
 		glm::mat4 skyboxView = glm::mat4(glm::mat3(glm::lookAt(camera.position, camera.position + camera.orientation, camera.up)));
-		glm::mat4 skyboxProjection = glm::perspective(glm::radians(45.0f), (float) width / (float) height, 0.1f, 100.0f);
+		glm::mat4 skyboxProjection = glm::perspective(glm::radians(45.0f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
 
 		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.id, "view"), 1, GL_FALSE, glm::value_ptr(skyboxView));
 		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.id, "projection"), 1, GL_FALSE, glm::value_ptr(skyboxProjection));
@@ -477,34 +462,23 @@ int main()
 
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LESS);
-	
 
+		// Draw the normal scene
+		for (const auto& position : treePositions)
+		{
+			glm::mat4 treeModel = glm::translate(glm::mat4(1.0f), position);
+			tree.Draw(shaderProgram, camera, treeModel);
+		}
 
-		// Draw ground
-		//ground.Draw(shaderProgram, camera, groundModel);
-		infiniteTerrain.Draw(shaderProgram, camera, terrainModel);
+		terrainMesh.Draw(shaderProgram, camera, terrainModel);
 
-
-
-
-
-
-
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-
-		// Draw model
-		tree.Draw(shaderProgram, camera);
-
-		glDisable(GL_CULL_FACE);
-		
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, FBO);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcessingFBO);
 		glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
+		// Bind the default framebuffer
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		framebufferProgram.Activate();
-
 		glBindVertexArray(rectangleVAO);
 		glDisable(GL_DEPTH_TEST);
 		glBindTexture(GL_TEXTURE_2D, postProcessingTexture);
@@ -517,12 +491,12 @@ int main()
 	// Clean up
 	shaderProgram.Delete();
 	skyboxShader.Delete();
-	
+	framebufferProgram.Delete();
+
 	glDeleteFramebuffers(1, &FBO);
 	glDeleteFramebuffers(1, &postProcessingFBO);
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
-
 	return 0;
 }

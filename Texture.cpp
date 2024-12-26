@@ -1,12 +1,10 @@
-#include"Texture.h"
+#include "Texture.h"
 
 Texture::Texture(const char* image, const char* textureType, GLuint slot)
 {
 	type = textureType;
 	int imageWidth, imageHeight, imageChannels;
-	//stbi_set_flip_vertically_on_load(true);
 	stbi_set_flip_vertically_on_load(false);
-
 	unsigned char* bytes = stbi_load(image, &imageWidth, &imageHeight, &imageChannels, 0);
 
 	glGenTextures(1, &id);

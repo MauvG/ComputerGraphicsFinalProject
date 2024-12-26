@@ -1,4 +1,4 @@
-#include"Camera.h"
+#include "Camera.h"
 
 Camera::Camera(int width, int height, glm::vec3 position)
 {
@@ -51,11 +51,11 @@ void Camera::Inputs(GLFWwindow* window)
 	}
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
 	{
-		speed = 1.0f;
+		speed = 0.1f;
 	}
 	else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE)
 	{
-		speed = 10.0f;
+		speed = 1.0f;
 	}
 
 
@@ -76,14 +76,15 @@ void Camera::Inputs(GLFWwindow* window)
 		float rotationX = sensitivity * (float)(mouseY - (height / 2)) / height;
 		float rotationY = sensitivity * (float)(mouseX - (width / 2)) / width;
 
-		glm::vec3 neworientation = glm::rotate(orientation, glm::radians(-rotationX), glm::normalize(glm::cross(orientation, up)));
+		glm::vec3 newOrientation = glm::rotate(orientation, glm::radians(-rotationX), glm::normalize(glm::cross(orientation, up)));
 
-		if (abs(glm::angle(neworientation, up) - glm::radians(90.0f)) <= glm::radians(85.0f))
+		if (abs(glm::angle(newOrientation, up) - glm::radians(90.0f)) <= glm::radians(85.0f))
 		{
-			orientation = neworientation;
+			orientation = newOrientation;
 		}
 
 		orientation = glm::rotate(orientation, glm::radians(-rotationY), up);
+
 		glfwSetCursorPos(window, (width / 2), (height / 2));
 	}
 	else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE)

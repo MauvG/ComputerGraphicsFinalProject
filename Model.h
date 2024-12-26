@@ -12,7 +12,7 @@
 class Model {
 public:
     Model(const std::string& filePath);
-    void Draw(Shader& shader, Camera& camera);
+    void Draw(Shader& shader, Camera& camera, glm::mat4 model);
 
 private:
     tinygltf::Model model;

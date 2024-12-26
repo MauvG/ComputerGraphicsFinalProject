@@ -24,13 +24,12 @@ uniform mat4 lightProjection;
 
 void main()
 {
-	currentPosition  = vec3(model * translation * rotation * scale * vec4(aPosition, 1.0f));
+	currentPosition = vec3(model * translation * rotation * scale * vec4(aPosition, 1.0f));
 	normal = aNormal;
 	color = aColor;
-	//textureCoordinate = mat2(0.0, -1.0, 1.0, 0.0) * aTexture;
 	textureCoordinate = aTexture;
 	fragPositionLight = lightProjection * vec4(currentPosition, 1.0f);
 	height = aHeight;
-
+	
 	gl_Position = cameraMatrix * vec4(currentPosition, 1.0);
 }

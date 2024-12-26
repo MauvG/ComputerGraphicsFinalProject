@@ -145,11 +145,11 @@ std::vector<GLuint> Model::GetIndices(const tinygltf::Accessor& accessor) {
     return indices;
 }
 
-void Model::Draw(Shader& shader, Camera& camera) {
+void Model::Draw(Shader& shader, Camera& camera, glm::mat4 model) {
     for (size_t i = 0; i < meshes.size(); ++i) {
         shader.Activate();
      
         glUniformMatrix4fv(glGetUniformLocation(shader.id, "model"), 1, GL_FALSE, glm::value_ptr(matricesMeshes[i]));
-        meshes[i].Draw(shader, camera);
+        meshes[i].Draw(shader, camera, model);
     }
 }
