@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 
 Model::Model(const std::string& filePath) : filePath(filePath) {
     LoadModel(filePath);
@@ -12,25 +13,83 @@ void Model::LoadModel(const std::string& filePath) {
     tinygltf::TinyGLTF loader;
     std::string err, warn;
 
-    if (!loader.LoadASCIIFromFile(&model, &err, &warn, filePath)) {
+    bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
+    if (!ret) {
         std::cerr << "Failed to load GLTF model: " << filePath << "\nError: " << err << "\nWarning: " << warn << std::endl;
         return;
     }
     std::cout << "Successfully loaded GLTF model: " << filePath << std::endl;
 
+    // Process nodes and meshes
     if (!model.scenes.empty() && model.defaultScene >= 0) {
         const tinygltf::Scene& scene = model.scenes[model.defaultScene];
         for (int nodeIndex : scene.nodes) {
             ProcessNode(model.nodes[nodeIndex], glm::mat4(1.0f));
         }
     }
+
+    // Load animations
+    for (const auto& anim : model.animations) {
+        for (const auto& channel : anim.channels) {
+            if (channel.target_path != "translation") continue; // Only handle translation for simplicity
+
+            AnimationChannel animChannel;
+            animChannel.nodeIndex = channel.target_node;
+            const auto& sampler = anim.samplers[channel.sampler];
+            const auto& inputAccessor = model.accessors[sampler.input];
+            const auto& outputAccessor = model.accessors[sampler.output];
+
+            // Get keyframe times
+            std::vector<float> times;
+            {
+                const auto& bufferView = model.bufferViews[inputAccessor.bufferView];
+                const auto& buffer = model.buffers[bufferView.buffer];
+                const unsigned char* dataPtr = buffer.data.data() + bufferView.byteOffset + inputAccessor.byteOffset;
+                const float* floatData = reinterpret_cast<const float*>(dataPtr);
+                times.assign(floatData, floatData + inputAccessor.count);
+            }
+
+            // Get translations
+            std::vector<float> translations;
+            {
+                const auto& bufferView = model.bufferViews[outputAccessor.bufferView];
+                const auto& buffer = model.buffers[bufferView.buffer];
+                const unsigned char* dataPtr = buffer.data.data() + bufferView.byteOffset + outputAccessor.byteOffset;
+                const float* floatData = reinterpret_cast<const float*>(dataPtr);
+                translations.assign(floatData, floatData + outputAccessor.count * 3);
+            }
+
+            // Populate keyframes
+            for (size_t i = 0; i < times.size(); ++i) {
+                Keyframe kf;
+                kf.time = times[i];
+                kf.translation = glm::vec3(
+                    translations[i * 3],
+                    translations[i * 3 + 1],
+                    translations[i * 3 + 2]
+                );
+                animChannel.keyframes.push_back(kf);
+            }
+
+            // Update animation duration
+            if (!animChannel.keyframes.empty()) {
+                float lastTime = animChannel.keyframes.back().time;
+                if (lastTime > animationDuration)
+                    animationDuration = lastTime;
+            }
+
+            animationChannels.push_back(animChannel);
+        }
+    }
+
+    std::cout << "Loaded " << animationChannels.size() << " animation channels." << std::endl;
 }
 
 void Model::ProcessNode(const tinygltf::Node& node, const glm::mat4& parentTransform) {
     glm::mat4 transform = parentTransform;
 
     if (!node.matrix.empty()) {
-        glm::mat4 matNode = glm::mat4(glm::make_mat4(node.matrix.data()));
+        glm::mat4 matNode = glm::make_mat4(node.matrix.data());
         transform *= matNode;
     }
     else {
@@ -39,8 +98,9 @@ void Model::ProcessNode(const tinygltf::Node& node, const glm::mat4& parentTrans
                 node.translation[0], node.translation[1], node.translation[2]));
         }
         if (!node.rotation.empty()) {
-            transform *= glm::mat4_cast(glm::quat(
-                node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2]));
+            glm::quat quatNode = glm::quat(
+                node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2]);
+            transform *= glm::mat4_cast(quatNode);
         }
         if (!node.scale.empty()) {
             transform = glm::scale(transform, glm::vec3(
@@ -67,12 +127,13 @@ void Model::ProcessMesh(const tinygltf::Mesh& gltfMesh, const glm::mat4& transfo
             const auto& positionData = GetAttributeData(accessor);
 
             for (size_t i = 0; i < accessor.count; ++i) {
-                vertices.push_back(Vertex{
-                    glm::vec3(positionData[i * 3], positionData[i * 3 + 1], positionData[i * 3 + 2]),
-                    glm::vec3(1.0f),
-                    glm::vec3(1.0f),
-                    glm::vec2(0.0f) 
-                    });
+                Vertex vertex;
+                vertex.position = glm::vec3(positionData[i * 3], positionData[i * 3 + 1], positionData[i * 3 + 2]);
+                vertex.normal = glm::vec3(1.0f); // Placeholder
+                vertex.color = glm::vec3(1.0f);  // Placeholder
+                vertex.textureUV = glm::vec2(0.0f); // Placeholder
+                vertex.height = 0.0f; // Placeholder
+                vertices.push_back(vertex);
             }
         }
 
@@ -91,65 +152,135 @@ void Model::ProcessMesh(const tinygltf::Mesh& gltfMesh, const glm::mat4& transfo
             indices = GetIndices(model.accessors[primitive.indices]);
         }
 
+        // Handle materials/textures as needed
         std::vector<Texture> textures;
         if (primitive.material >= 0) {
             const auto& material = model.materials[primitive.material];
 
             if (material.values.find("baseColorTexture") != material.values.end()) {
                 int textureIndex = material.values.at("baseColorTexture").TextureIndex();
-                if (textureIndex >= 0) {
-                    const auto& image = model.images[textureIndex];
+                if (textureIndex >= 0 && textureIndex < model.textures.size()) {
+                    const auto& texture = model.textures[textureIndex];
+                    const auto& image = model.images[texture.source];
 
                     std::string modelDirectory = filePath.substr(0, filePath.find_last_of('/') + 1);
                     std::string texturePath = modelDirectory + image.uri;
                     std::cout << "Loading texture: " << texturePath << std::endl;
 
-                    textures.push_back(Texture(texturePath.c_str(), "diffuse", 0));
+                    textures.emplace_back(Texture(texturePath.c_str(), "diffuse", 0));
                 }
             }
         }
 
         meshes.emplace_back(vertices, indices, textures);
-        matricesMeshes.push_back(transform);
+        matricesMeshes.emplace_back(transform);
     }
 }
 
 std::vector<float> Model::GetAttributeData(const tinygltf::Accessor& accessor) {
+    std::vector<float> result;
     const auto& bufferView = model.bufferViews[accessor.bufferView];
     const auto& buffer = model.buffers[bufferView.buffer];
     const unsigned char* data = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
-    const float* floatData = reinterpret_cast<const float*>(data);
 
-    std::vector<float> result(floatData, floatData + accessor.count * 3);
+    size_t count = accessor.count;
+    size_t stride = 1;
+    switch (accessor.type) {
+    case TINYGLTF_TYPE_SCALAR: stride = 1; break;
+    case TINYGLTF_TYPE_VEC2: stride = 2; break;
+    case TINYGLTF_TYPE_VEC3: stride = 3; break;
+    case TINYGLTF_TYPE_VEC4: stride = 4; break;
+    default: stride = 1; break;
+    }
+
+    for (size_t i = 0; i < count * stride; ++i) {
+        result.push_back(static_cast<const float*>(reinterpret_cast<const void*>(data))[i]);
+    }
+
     return result;
 }
 
 std::vector<GLuint> Model::GetIndices(const tinygltf::Accessor& accessor) {
+    std::vector<GLuint> indices;
     const auto& bufferView = model.bufferViews[accessor.bufferView];
     const auto& buffer = model.buffers[bufferView.buffer];
     const unsigned char* data = buffer.data.data() + bufferView.byteOffset + accessor.byteOffset;
 
-    std::vector<GLuint> indices;
-    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
-        const GLuint* intData = reinterpret_cast<const GLuint*>(data);
-        indices.insert(indices.end(), intData, intData + accessor.count);
+    for (size_t i = 0; i < accessor.count; ++i) {
+        switch (accessor.componentType) {
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+            indices.push_back(static_cast<const GLuint*>(reinterpret_cast<const void*>(data))[i]);
+            break;
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+            indices.push_back(static_cast<const GLushort*>(reinterpret_cast<const void*>(data))[i]);
+            break;
+        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+            indices.push_back(static_cast<const GLubyte*>(reinterpret_cast<const void*>(data))[i]);
+            break;
+        default:
+            indices.push_back(0);
+            break;
+        }
     }
-    else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-        const GLushort* shortData = reinterpret_cast<const GLushort*>(data);
-        indices.insert(indices.end(), shortData, shortData + accessor.count);
-    }
-    else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
-        const GLubyte* byteData = reinterpret_cast<const GLubyte*>(data);
-        indices.insert(indices.end(), byteData, byteData + accessor.count);
-    }
+
     return indices;
 }
 
-void Model::Draw(Shader& shader, Camera& camera, glm::mat4 model) {
+void Model::Draw(Shader& shader, Camera& camera, glm::mat4 modelMatrix) {
     for (size_t i = 0; i < meshes.size(); ++i) {
         shader.Activate();
-     
-        glUniformMatrix4fv(glGetUniformLocation(shader.id, "model"), 1, GL_FALSE, glm::value_ptr(matricesMeshes[i]));
-        meshes[i].Draw(shader, camera, model);
+
+        // Combine the model matrix with any node-specific transformations
+        glm::mat4 finalModel = modelMatrix * matricesMeshes[i];
+        glUniformMatrix4fv(glGetUniformLocation(shader.id, "model"), 1, GL_FALSE, glm::value_ptr(finalModel));
+
+        meshes[i].Draw(shader, camera, finalModel);
+    }
+}
+
+void Model::UpdateAnimation(float currentTime) {
+    for (auto& channel : animationChannels) {
+        if (channel.keyframes.empty()) continue;
+
+        // Loop the animation
+        float time = fmod(currentTime, animationDuration);
+
+        // Find the two keyframes surrounding the current time
+        Keyframe kf1 = channel.keyframes[0];
+        Keyframe kf2 = channel.keyframes[0];
+        for (size_t i = 0; i < channel.keyframes.size() - 1; ++i) {
+            if (time >= channel.keyframes[i].time && time <= channel.keyframes[i + 1].time) {
+                kf1 = channel.keyframes[i];
+                kf2 = channel.keyframes[i + 1];
+                break;
+            }
+        }
+
+        // Calculate interpolation factor
+        float delta = kf2.time - kf1.time;
+        float factor = (delta > 0.0f) ? (time - kf1.time) / delta : 0.0f;
+
+        // Interpolate translation
+        glm::vec3 interpolated = glm::mix(kf1.translation, kf2.translation, factor);
+
+        // Update the corresponding mesh's transformation
+        // Assuming one mesh per node for simplicity
+        if (channel.nodeIndex < matricesMeshes.size()) {
+            // Extract current scale and rotation
+            glm::vec3 scale;
+            glm::quat rotation;
+            glm::vec3 translation;
+            glm::vec3 skew;
+            glm::vec4 perspective;
+            glm::decompose(matricesMeshes[channel.nodeIndex], scale, rotation, translation, skew, perspective);
+
+            // Update translation
+            translation = interpolated;
+
+            // Recompose the transformation matrix
+            matricesMeshes[channel.nodeIndex] = glm::translate(glm::mat4(1.0f), translation) *
+                glm::mat4_cast(rotation) *
+                glm::scale(glm::mat4(1.0f), scale);
+        }
     }
 }

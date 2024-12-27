@@ -14,6 +14,9 @@ const unsigned int height = 1080;
 unsigned int samples = 8;
 float gamma = 3.0f;
 
+float currentAnimationTime = 0.0f;
+float lastFrameTime = 0.0f;
+
 float skyboxVertices[] = {
 	// front
 	-1.0f,  1.0f,  1.0f,   1.0f / 4.0f,   1.998f / 3.0f,
@@ -394,6 +397,17 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		
+		// Calculate deltaTime
+		float currentFrameTime = glfwGetTime();
+		float deltaTime = currentFrameTime - lastFrameTime;
+		lastFrameTime = currentFrameTime;
+
+		// Update animation time
+		currentAnimationTime += deltaTime;
+
+		// Update UFO animation
+		ufo.UpdateAnimation(currentAnimationTime);
+
 		currentTime = glfwGetTime();
 		timeDifference = currentTime - previousTime;
 		counter++;
