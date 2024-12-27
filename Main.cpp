@@ -203,11 +203,12 @@ int main()
 	std::vector<Texture> terrainTextures{Texture("Textures/GrassDiffuse.jpg", "diffuse", 0)};
 
 	Mesh terrainMesh(terrainVertices, terrainIndices, terrainTextures);
-	glm::mat4 terrainModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f * (terrainSize / 2), -50.0f, -1.0f * (terrainSize / 2)));
+	float terrainYOffset = -100.0f;
+	glm::mat4 terrainModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f * (terrainSize / 2), terrainYOffset, -1.0f * (terrainSize / 2)));
 
 	// Add tree models
 	Model tree("Models/MyTree/scene.gltf");
-	float treeYOffset = -47.5f;
+	float treeYOffset = terrainYOffset + 2.5f;
 
 	int numberOfTrees = 5000;
 	std::vector<glm::vec3> treePositions;
@@ -240,6 +241,9 @@ int main()
 
 		treePositions.emplace_back(glm::vec3(worldX, worldY, worldZ));
 	}
+
+	Model ufo("Models/Ufo/scene.gltf");
+	glm::mat4 ufoModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -25.0f, 0.0f));
 
 	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -417,7 +421,7 @@ int main()
 			glm::mat4 treeModel = glm::translate(glm::mat4(1.0f), position);
 			tree.Draw(shadowMapProgram, camera, treeModel);
 		}
-		
+		ufo.Draw(shadowMapProgram, camera, ufoModel);
 		terrainMesh.Draw(shadowMapProgram, camera, terrainModel);
 
 		// Switch back to the default
@@ -469,7 +473,7 @@ int main()
 			glm::mat4 treeModel = glm::translate(glm::mat4(1.0f), position);
 			tree.Draw(shaderProgram, camera, treeModel);
 		}
-
+		ufo.Draw(shaderProgram, camera, ufoModel);
 		terrainMesh.Draw(shaderProgram, camera, terrainModel);
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, FBO);
