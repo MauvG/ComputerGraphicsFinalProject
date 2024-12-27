@@ -20,7 +20,6 @@ void Model::LoadModel(const std::string& filePath) {
     }
     std::cout << "Successfully loaded GLTF model: " << filePath << std::endl;
 
-    // Process nodes and meshes
     if (!model.scenes.empty() && model.defaultScene >= 0) {
         const tinygltf::Scene& scene = model.scenes[model.defaultScene];
         for (int nodeIndex : scene.nodes) {
@@ -28,10 +27,9 @@ void Model::LoadModel(const std::string& filePath) {
         }
     }
 
-    // Load animations
     for (const auto& anim : model.animations) {
         for (const auto& channel : anim.channels) {
-            if (channel.target_path != "translation") continue; // Only handle translation for simplicity
+            if (channel.target_path != "translation") continue;
 
             AnimationChannel animChannel;
             animChannel.nodeIndex = channel.target_node;
@@ -39,7 +37,6 @@ void Model::LoadModel(const std::string& filePath) {
             const auto& inputAccessor = model.accessors[sampler.input];
             const auto& outputAccessor = model.accessors[sampler.output];
 
-            // Get keyframe times
             std::vector<float> times;
             {
                 const auto& bufferView = model.bufferViews[inputAccessor.bufferView];
@@ -49,7 +46,6 @@ void Model::LoadModel(const std::string& filePath) {
                 times.assign(floatData, floatData + inputAccessor.count);
             }
 
-            // Get translations
             std::vector<float> translations;
             {
                 const auto& bufferView = model.bufferViews[outputAccessor.bufferView];
@@ -59,7 +55,6 @@ void Model::LoadModel(const std::string& filePath) {
                 translations.assign(floatData, floatData + outputAccessor.count * 3);
             }
 
-            // Populate keyframes
             for (size_t i = 0; i < times.size(); ++i) {
                 Keyframe kf;
                 kf.time = times[i];
@@ -71,7 +66,6 @@ void Model::LoadModel(const std::string& filePath) {
                 animChannel.keyframes.push_back(kf);
             }
 
-            // Update animation duration
             if (!animChannel.keyframes.empty()) {
                 float lastTime = animChannel.keyframes.back().time;
                 if (lastTime > animationDuration)
@@ -129,10 +123,10 @@ void Model::ProcessMesh(const tinygltf::Mesh& gltfMesh, const glm::mat4& transfo
             for (size_t i = 0; i < accessor.count; ++i) {
                 Vertex vertex;
                 vertex.position = glm::vec3(positionData[i * 3], positionData[i * 3 + 1], positionData[i * 3 + 2]);
-                vertex.normal = glm::vec3(1.0f); // Placeholder
-                vertex.color = glm::vec3(1.0f);  // Placeholder
-                vertex.textureUV = glm::vec2(0.0f); // Placeholder
-                vertex.height = 0.0f; // Placeholder
+                vertex.normal = glm::vec3(1.0f); 
+                vertex.color = glm::vec3(1.0f);  
+                vertex.textureUV = glm::vec2(0.0f);
+                vertex.height = 0.0f;
                 vertices.push_back(vertex);
             }
         }
@@ -152,7 +146,6 @@ void Model::ProcessMesh(const tinygltf::Mesh& gltfMesh, const glm::mat4& transfo
             indices = GetIndices(model.accessors[primitive.indices]);
         }
 
-        // Handle materials/textures as needed
         std::vector<Texture> textures;
         if (primitive.material >= 0) {
             const auto& material = model.materials[primitive.material];
@@ -230,7 +223,6 @@ void Model::Draw(Shader& shader, Camera& camera, glm::mat4 modelMatrix) {
     for (size_t i = 0; i < meshes.size(); ++i) {
         shader.Activate();
 
-        // Combine the model matrix with any node-specific transformations
         glm::mat4 finalModel = modelMatrix * matricesMeshes[i];
         glUniformMatrix4fv(glGetUniformLocation(shader.id, "model"), 1, GL_FALSE, glm::value_ptr(finalModel));
 
@@ -242,10 +234,8 @@ void Model::UpdateAnimation(float currentTime) {
     for (auto& channel : animationChannels) {
         if (channel.keyframes.empty()) continue;
 
-        // Loop the animation
         float time = fmod(currentTime, animationDuration);
 
-        // Find the two keyframes surrounding the current time
         Keyframe kf1 = channel.keyframes[0];
         Keyframe kf2 = channel.keyframes[0];
         for (size_t i = 0; i < channel.keyframes.size() - 1; ++i) {
@@ -256,17 +246,12 @@ void Model::UpdateAnimation(float currentTime) {
             }
         }
 
-        // Calculate interpolation factor
         float delta = kf2.time - kf1.time;
         float factor = (delta > 0.0f) ? (time - kf1.time) / delta : 0.0f;
 
-        // Interpolate translation
         glm::vec3 interpolated = glm::mix(kf1.translation, kf2.translation, factor);
 
-        // Update the corresponding mesh's transformation
-        // Assuming one mesh per node for simplicity
         if (channel.nodeIndex < matricesMeshes.size()) {
-            // Extract current scale and rotation
             glm::vec3 scale;
             glm::quat rotation;
             glm::vec3 translation;
@@ -274,10 +259,8 @@ void Model::UpdateAnimation(float currentTime) {
             glm::vec4 perspective;
             glm::decompose(matricesMeshes[channel.nodeIndex], scale, rotation, translation, skew, perspective);
 
-            // Update translation
             translation = interpolated;
 
-            // Recompose the transformation matrix
             matricesMeshes[channel.nodeIndex] = glm::translate(glm::mat4(1.0f), translation) *
                 glm::mat4_cast(rotation) *
                 glm::scale(glm::mat4(1.0f), scale);

@@ -194,26 +194,26 @@ int main()
 	// Scene
 
 	// Creates camera object
-	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 2.0f));
+	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
 	
 	// Terrain generation
-	unsigned int terrainSize = 1000;
+	unsigned int terrainSize = 100;
 	float cellSize = 1.0f;
-	float noiseScale = 0.5f;
+	float noiseScale = 0.1f;
 
 	std::vector<Vertex> terrainVertices = generateTerrainVertices(terrainSize, terrainSize, cellSize, noiseScale);
 	std::vector<GLuint> terrainIndices = generateTerrainIndices(terrainSize, terrainSize);
 	std::vector<Texture> terrainTextures{Texture("Textures/GrassDiffuse.jpg", "diffuse", 0)};
 
 	Mesh terrainMesh(terrainVertices, terrainIndices, terrainTextures);
-	float terrainYOffset = -100.0f;
+	float terrainYOffset = -75.0f;
 	glm::mat4 terrainModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f * (terrainSize / 2), terrainYOffset, -1.0f * (terrainSize / 2)));
 
 	// Add tree models
 	Model tree("Models/MyTree/scene.gltf");
-	float treeYOffset = terrainYOffset + 2.5f;
+	float treeYOffset = terrainYOffset - 0.1f;
 
-	int numberOfTrees = 5000;
+	int numberOfTrees = 100;
 	std::vector<glm::vec3> treePositions;
 	treePositions.reserve(numberOfTrees);
 
@@ -246,7 +246,7 @@ int main()
 	}
 
 	Model ufo("Models/Ufo/scene.gltf");
-	glm::mat4 ufoModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -25.0f, 0.0f));
+	glm::mat4 ufoModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -15.0f, 0.0f));
 
 	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -433,6 +433,7 @@ int main()
 		for (const auto& position : treePositions)
 		{			
 			glm::mat4 treeModel = glm::translate(glm::mat4(1.0f), position);
+			treeModel = glm::scale(treeModel, glm::vec3(2.0f, 2.0f, 2.0f));
 			tree.Draw(shadowMapProgram, camera, treeModel);
 		}
 		ufo.Draw(shadowMapProgram, camera, ufoModel);
@@ -485,6 +486,7 @@ int main()
 		for (const auto& position : treePositions)
 		{
 			glm::mat4 treeModel = glm::translate(glm::mat4(1.0f), position);
+			treeModel = glm::scale(treeModel, glm::vec3(2.0f, 2.0f, 2.0f));
 			tree.Draw(shaderProgram, camera, treeModel);
 		}
 		ufo.Draw(shaderProgram, camera, ufoModel);

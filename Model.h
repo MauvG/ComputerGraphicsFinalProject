@@ -9,13 +9,11 @@
 #include <tinygltf/tiny_gltf.h>
 #include "Mesh.h"
 
-// Keyframe structure for translation
 struct Keyframe {
     float time;
     glm::vec3 translation;
 };
 
-// Animation channel structure
 struct AnimationChannel {
     int nodeIndex;
     std::vector<Keyframe> keyframes;
@@ -26,7 +24,6 @@ public:
     Model(const std::string& filePath);
     void Draw(Shader& shader, Camera& camera, glm::mat4 model);
 
-    // New function to update animations
     void UpdateAnimation(float currentTime);
 
 private:
@@ -35,7 +32,6 @@ private:
     std::vector<glm::mat4> matricesMeshes;
     std::string filePath;
 
-    // Animation data
     std::vector<AnimationChannel> animationChannels;
     float animationDuration = 0.0f;
 
