@@ -145,18 +145,31 @@ int main()
 	glm::mat4 ufoModel = glm::mat4(1.0f);
 
 	// Terrain
-	float terrainSize = 1000.0f;               // 100 units
-	unsigned int terrainResolution = 2048;      // 256x256 vertices
-	float terrainHeightScale = 1.0f;         // Height multiplier
-	float terrainNoiseFrequency = 1.0f;       // Frequency for noise
+	float terrainSize = 1000000.0f;             // Size of the terrain
+	unsigned int terrainResolution = 1024;      // Resolution (number of vertices per axis)
+	float terrainHeightScale = 200.0f;          // Height multiplier (increased for more variation)
+	float terrainNoiseFrequency = 0.002f;       // Base frequency for larger features
+	int terrainOctaves = 6;                     // Number of noise layers
+	float terrainLacunarity = 2.0f;             // Frequency multiplier per octave
+	float terrainGain = 0.5f;                   // Amplitude multiplier per octave
 
 	// Paths to terrain textures
 	std::string terrainDiffusePath = "Textures/GrassDiffuse.jpg";
 	std::string terrainSpecularPath = "Textures/GrassSpecular.jpg";
 
-	// Instantiate Terrain
-	Terrain terrain(terrainSize, terrainResolution, terrainHeightScale, terrainNoiseFrequency, terrainDiffusePath, terrainSpecularPath);
-	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f, 200.0f, 1000.0f));
+	Terrain terrain(
+		terrainSize,
+		terrainResolution,
+		terrainHeightScale,
+		terrainNoiseFrequency,
+		terrainOctaves,
+		terrainLacunarity,
+		terrainGain,
+		terrainDiffusePath,
+		terrainSpecularPath
+	);
+
+	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 10.0f, 1.0f));
 
 	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;

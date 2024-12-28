@@ -1,11 +1,15 @@
 #include "Terrain.h"
 #include <iostream>
 
-Terrain::Terrain(float size, unsigned int resolution, float heightScale, float noiseFrequency, const std::string& diffuseTexturePath, const std::string& specularTexturePath)
-    : size(size), resolution(resolution), heightScale(heightScale), noiseFrequency(noiseFrequency), terrainMesh(nullptr)
+Terrain::Terrain(float size, unsigned int resolution, float heightScale, float noiseFrequency, int octaves, float lacunarity, float gain, const std::string& diffuseTexturePath, const std::string& specularTexturePath)
+    : size(size), resolution(resolution), heightScale(heightScale), noiseFrequency(noiseFrequency), octaves(octaves), lacunarity(lacunarity), gain(gain), terrainMesh(nullptr)
 {
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    noise.SetFrequency(noiseFrequency);
+    noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    noise.SetFractalOctaves(octaves);           
+    noise.SetFrequency(noiseFrequency);        
+    noise.SetFractalLacunarity(lacunarity);     
+    noise.SetFractalGain(gain);                
 
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
@@ -40,7 +44,8 @@ void Terrain::GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>
             vertex.position.x = -halfSize + x * step;
             vertex.position.z = -halfSize + z * step;
             vertex.position.y = noise.GetNoise(vertex.position.x, vertex.position.z) * heightScale;
-            vertex.textureUV = glm::vec2((static_cast<float>(x) / (resolution - 1)) * 10000, (static_cast<float>(z) / (resolution - 1)) * 10000);
+            float textureScale = 10000.0f;
+            vertex.textureUV = glm::vec2((static_cast<float>(x) / (resolution - 1)) * textureScale, (static_cast<float>(z) / (resolution - 1)) * textureScale);
             vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
             vertex.height = vertex.position.y;
             vertex.normal = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -67,6 +72,7 @@ void Terrain::GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>
         }
     }
 }
+
 
 void Terrain::CalculateNormals(std::vector<Vertex>& vertices, const std::vector<GLuint>& indices)
 {
