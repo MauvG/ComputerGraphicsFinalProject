@@ -10,14 +10,29 @@ in vec4 fragPositionLight;
 in float height;
 
 uniform sampler2D diffuse0; 
-uniform sampler2D specular0;
+uniform sampler2D diffuse1; 
 uniform sampler2D shadowMap;
 
 uniform vec4 lightColor;
 uniform vec3 lightPosition;
 uniform vec3 cameraPosition;
 
-vec4 directLight()
+vec4 blendTextures()
+{
+	float heightThreshold = -10.0f;
+    vec4 textureOne = texture(diffuse0, textureCoordinate);
+    vec4 textureTwo = texture(diffuse1, textureCoordinate);
+
+    float blendFactor = smoothstep(heightThreshold - 10.0f, heightThreshold + 10.0, height);
+    vec4 blendedColor = mix(textureOne, textureTwo, blendFactor);
+
+    return blendedColor;
+}
+
+
+
+
+vec4 directLight(vec4 blendedColor)
 {
 	float ambient = 0.50f;
 
@@ -46,7 +61,7 @@ vec4 directLight()
 		float currentDepth = lightCoordinate.z;
 		float bias = max(0.025f * (1.0f - dot(currentNornal, lightDirection)), 0.0005f);
 
-		int sampleRadius = 2;
+		int sampleRadius = 4;
 		vec2 pixelSize = 1.0 / textureSize(shadowMap, 0);
 
 		for(int y = -sampleRadius; y <= sampleRadius; y++)
@@ -62,10 +77,12 @@ vec4 directLight()
 		shadow /= pow((sampleRadius * 2 + 1), 2);
 	}
 
-	return (texture(diffuse0, textureCoordinate) * (diffuse * (1.0f - shadow) + ambient) + texture(specular0, textureCoordinate).r * specular  * (1.0f - shadow)) * lightColor;
+	return (blendedColor * (diffuse * (1.0f - shadow) + ambient)) * lightColor;
 }
 
 void main()
 {
-	FragColor = directLight();
+	
+	vec4 blendedColor = blendTextures();
+	FragColor = directLight(blendedColor);
 }

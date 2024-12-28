@@ -1,5 +1,6 @@
 {
 	"asset":{
+		"copyright":"textures",
 		"generator":"Khronos glTF Blender I/O v4.3.47",
 		"version":"2.0"
 	},
@@ -73,68 +74,68 @@
 		{
 			"mimeType":"image/png",
 			"name":"AllColoursTexure",
-			"uri":"textures/AllColoursTexure.png"
+			"uri":"AllColoursTexure.png"
 		}
 	],
 	"accessors":[
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":132,
+			"count":87,
 			"max":[
-				0.9184938073158264,
+				0.8708585500717163,
 				1.5061755180358887,
-				1.4549591541290283
+				1.3586264848709106
 			],
 			"min":[
-				-1.2562899589538574,
-				-2.943864583969116,
-				-1.063999891281128
+				-1.1664263010025024,
+				-2.9377214908599854,
+				-1.0010734796524048
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":132,
+			"count":87,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":132,
+			"count":87,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":186,
+			"count":330,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":1584,
+			"byteLength":1044,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1584,
-			"byteOffset":1584,
+			"byteLength":1044,
+			"byteOffset":1044,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1056,
-			"byteOffset":3168,
+			"byteLength":696,
+			"byteOffset":2088,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":372,
-			"byteOffset":4224,
+			"byteLength":660,
+			"byteOffset":2784,
 			"target":34963
 		}
 	],
@@ -146,7 +147,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":4596,
+			"byteLength":3444,
 			"uri":"scene.bin"
 		}
 	]

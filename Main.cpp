@@ -4,11 +4,18 @@
 #include "Framebuffer.h"
 #include "Shadows.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <random>
+
 const unsigned int width = 1920;
 const unsigned int height = 1080;
 
 const unsigned int samples = 2;
 const float gamma = 3.0f;
+
+struct InstanceData {
+	glm::mat4 modelMatrix;
+};
 
 int main()
 {
@@ -57,26 +64,25 @@ int main()
 	// Create camera object
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
 
-	// Add tree models
 	Model tree("Models/MyTree/scene.gltf");
-	glm::mat4 treeModel = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
+	glm::mat4 treeModelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
+	//treeModelMatrix = glm::translate(treeModelMatrix, glm::vec3(-5.0f, 0.0f, 0.0f));
 
-	// Add ufo
+	Model rock("Models/MyRock/scene.gltf");
+	//glm::mat4 rockModelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f));
+	//rockModelMatrix = glm::translate(rockModelMatrix, glm::vec3(5.0f, 0.0f, 0.0f));
+
 	Model ufo("Models/Ufo/scene.gltf");
 	glm::mat4 ufoModel = glm::mat4(1.0f);
 
 	// Terrain
-	float terrainSize = 1000000.0f;             // Size of the terrain
-	unsigned int terrainResolution = 1024;      // Resolution (number of vertices per axis)
+	float terrainSize = 1000.0f;                // Size of the terrain
+	unsigned int terrainResolution = 128;       // Resolution (number of vertices per axis)
 	float terrainHeightScale = 200.0f;          // Height multiplier (increased for more variation)
 	float terrainNoiseFrequency = 0.002f;       // Base frequency for larger features
 	int terrainOctaves = 6;                     // Number of noise layers
 	float terrainLacunarity = 2.0f;             // Frequency multiplier per octave
 	float terrainGain = 0.5f;                   // Amplitude multiplier per octave
-
-	// Paths to terrain textures
-	std::string terrainDiffusePath = "Textures/GrassDiffuse.jpg";
-	std::string terrainSpecularPath = "Textures/GrassSpecular.jpg";
 
 	Terrain terrain(
 		terrainSize,
@@ -85,12 +91,66 @@ int main()
 		terrainNoiseFrequency,
 		terrainOctaves,
 		terrainLacunarity,
-		terrainGain,
-		terrainDiffusePath,
-		terrainSpecularPath
+		terrainGain
 	);
 
-	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 10.0f, 1.0f));
+	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+	//terrainModel = glm::translate(terrainModel, glm::vec3(0.0f, -5.0f, 0.0f));
+
+	// Number of instances
+	const unsigned int numTrees = 2500;
+	const unsigned int numRocks = 1000;
+
+	std::vector<InstanceData> treeInstances;
+	treeInstances.reserve(numTrees);
+
+	std::vector<InstanceData> rockInstances;
+	rockInstances.reserve(numRocks);
+
+	// Random number generators
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	std::uniform_real_distribution<float> posDist(-terrainSize / 2.0f, terrainSize / 2.0f);
+	std::uniform_real_distribution<float> scaleDist(1.0f, 2.0f);
+	std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
+
+	// Generate tree instances
+	for (unsigned int i = 0; i < numTrees; ++i)
+	{
+		float x = posDist(gen);
+		float z = posDist(gen);
+		float y = terrain.GetHeightAt(x, z) - 0.25f;
+
+		float scale = scaleDist(gen) * 10.0f;
+		float rotation = rotDist(gen);
+
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(x, y, z));
+		model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(scale));
+
+		treeInstances.push_back({ model });
+	}
+
+	// Generate rock instances
+	for (unsigned int i = 0; i < numRocks; ++i)
+	{
+		float x = posDist(gen);
+		float z = posDist(gen);
+		float y = terrain.GetHeightAt(x, z) - 0.25f;
+
+		float scale = scaleDist(gen);
+		float rotation = rotDist(gen);
+
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(x, y, z));
+		model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(scale));
+
+		rockInstances.push_back({ model });
+	}
+
 
 	// Skybox
 	Skybox skybox;
@@ -152,16 +212,27 @@ int main()
 		// Depth testing needed for Shadow Map
 		shadows.EnableDepthTest();
 
-		// Draw scene for shadow 			
+		// Draw scene for shadow
 		ufo.Draw(shadowMapShader, camera, ufoModel);
-		tree.Draw(shadowMapShader, camera, treeModel);
+		
+		// Draw all trees for shadow
+		for (const auto& treeInstance : treeInstances)
+		{
+			tree.Draw(shadowMapShader, camera, treeInstance.modelMatrix);
+		}
+
+		// Draw all rocks for shadow
+		for (const auto& rockInstance : rockInstances)
+		{
+			rock.Draw(shadowMapShader, camera, rockInstance.modelMatrix);
+		}
 
 		// Switch back to the default
 		framebuffer.Default();
 
 		// Handles camera
 		camera.Inputs(window);
-		camera.UpdateMatrix(45.0f, 0.1f, 10000.0f);
+		camera.UpdateMatrix(45.0f, 0.1f, 1000.0f);
 
 		// Send the light matrix to the shader
 		defaultShader.Activate();
@@ -175,9 +246,21 @@ int main()
 
 		// Draw scene
 		terrain.Draw(defaultShader, camera, terrainModel);
+
 		ufo.Draw(defaultShader, camera, ufoModel);
-		tree.Draw(defaultShader, camera, treeModel);
-		
+
+		// Draw all trees
+		for (const auto& treeInstance : treeInstances)
+		{	
+			tree.Draw(defaultShader, camera, treeInstance.modelMatrix);
+		}
+
+		// Draw all rocks
+		for (const auto& rockInstance : rockInstances)
+		{
+			rock.Draw(defaultShader, camera, rockInstance.modelMatrix);
+		}
+
 		// Bind fbo
 		framebuffer.Bind(framebufferShader);
 

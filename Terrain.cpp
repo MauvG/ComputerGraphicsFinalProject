@@ -1,22 +1,21 @@
 #include "Terrain.h"
 #include <iostream>
+#include <algorithm>
 
-Terrain::Terrain(float size, unsigned int resolution, float heightScale, float noiseFrequency, int octaves, float lacunarity, float gain, const std::string& diffuseTexturePath, const std::string& specularTexturePath)
+Terrain::Terrain(float size, unsigned int resolution, float heightScale, float noiseFrequency, int octaves, float lacunarity, float gain)
     : size(size), resolution(resolution), heightScale(heightScale), noiseFrequency(noiseFrequency), octaves(octaves), lacunarity(lacunarity), gain(gain), terrainMesh(nullptr)
 {
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
     noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-    noise.SetFractalOctaves(octaves);           
-    noise.SetFrequency(noiseFrequency);        
-    noise.SetFractalLacunarity(lacunarity);     
-    noise.SetFractalGain(gain);                
+    noise.SetFractalOctaves(octaves);
+    noise.SetFrequency(noiseFrequency);
+    noise.SetFractalLacunarity(lacunarity);
+    noise.SetFractalGain(gain);
 
-    std::vector<Vertex> vertices;
-    std::vector<GLuint> indices;
     GenerateTerrain(vertices, indices);
     CalculateNormals(vertices, indices);
 
-    std::vector<Texture> textures = LoadTextures(diffuseTexturePath, specularTexturePath);
+    std::vector<Texture> textures{ Texture("Textures/Grass1.jpg", "diffuse", 0), Texture("Textures/Grass2.jpg", "diffuse", 1) };
 
     terrainMesh = new Mesh(vertices, indices, textures);
 }
@@ -44,14 +43,17 @@ void Terrain::GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>
             vertex.position.x = -halfSize + x * step;
             vertex.position.z = -halfSize + z * step;
             vertex.position.y = noise.GetNoise(vertex.position.x, vertex.position.z) * heightScale;
-            float textureScale = 10000.0f;
+            float textureScale = 100;
             vertex.textureUV = glm::vec2((static_cast<float>(x) / (resolution - 1)) * textureScale, (static_cast<float>(z) / (resolution - 1)) * textureScale);
             vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
             vertex.height = vertex.position.y;
             vertex.normal = glm::vec3(0.0f, 0.0f, 0.0f);
             vertices.push_back(vertex);
+
+            
         }
     }
+
 
     for (unsigned int z = 0; z < resolution - 1; ++z)
     {
@@ -72,7 +74,6 @@ void Terrain::GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>
         }
     }
 }
-
 
 void Terrain::CalculateNormals(std::vector<Vertex>& vertices, const std::vector<GLuint>& indices)
 {
@@ -106,20 +107,42 @@ void Terrain::CalculateNormals(std::vector<Vertex>& vertices, const std::vector<
     }
 }
 
-std::vector<Texture> Terrain::LoadTextures(const std::string& diffusePath, const std::string& specularPath)
-{
-    std::vector<Texture> textures;
-
-    Texture diffuseTexture(diffusePath.c_str(), "diffuse", 0);
-    textures.push_back(diffuseTexture);
-
-    Texture specularTexture(specularPath.c_str(), "specular", 1);
-    textures.push_back(specularTexture);
-
-    return textures;
-}
-
 void Terrain::Draw(Shader& shader, Camera& camera, glm::mat4 model)
 {
     terrainMesh->Draw(shader, camera, model);
+}
+
+float Terrain::GetHeightAt(float x, float z) const
+{
+    float halfSize = size / 2.0f;
+    if (x < -halfSize || x > halfSize || z < -halfSize || z > halfSize)
+        return 0.0f;
+
+    float step = size / (resolution - 1);
+    float localX = x + halfSize;
+    float localZ = z + halfSize;
+    unsigned int gridX = static_cast<unsigned int>(localX / step);
+    unsigned int gridZ = static_cast<unsigned int>(localZ / step);
+
+    gridX = glm::clamp(gridX, 0u, resolution - 2);
+    gridZ = glm::clamp(gridZ, 0u, resolution - 2);
+
+    float height00 = vertices[gridZ * resolution + gridX].position.y;
+    float height10 = vertices[gridZ * resolution + (gridX + 1)].position.y;
+    float height01 = vertices[(gridZ + 1) * resolution + gridX].position.y;
+    float height11 = vertices[(gridZ + 1) * resolution + (gridX + 1)].position.y;
+
+    float fracX = (localX - gridX * step) / step;
+    float fracZ = (localZ - gridZ * step) / step;
+
+    if (fracX <= (1.0f - fracZ))
+    {
+        float height = height00 + fracX * (height10 - height00) + fracZ * (height01 - height00);
+        return height;
+    }
+    else
+    {
+        float height = height11 + (1.0f - fracX) * (height01 - height11) + (1.0f - fracZ) * (height10 - height11);
+        return height;
+    }
 }
