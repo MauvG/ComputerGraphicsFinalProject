@@ -1,4 +1,6 @@
 #include "Model.h"
+#include "Terrain.h"
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> 
 #include <glm/gtc/type_ptr.hpp>
@@ -11,7 +13,7 @@
 const unsigned int width = 1920;
 const unsigned int height = 1080;
 
-unsigned int samples = 8;
+unsigned int samples = 2;
 float gamma = 3.0f;
 
 float currentAnimationTime = 0.0f;
@@ -88,67 +90,6 @@ float rectangleVertices[] =
 	-1.0f,  1.0f,  0.0f, 1.0f
 };
 
-std::vector<Vertex> generateTerrainVertices(unsigned int width, unsigned int height, float scale, float noiseScale)
-{
-	std::vector<Vertex> vertices;
-	vertices.reserve(width * height);
-
-	FastNoiseLite noise;
-	noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-	noise.SetFrequency(0.01f);
-
-	for (unsigned int z = 0; z < height; z++)
-	{
-		for (unsigned int x = 0; x < width; x++)
-		{
-			float worldX = x * scale;
-			float worldZ = z * scale;
-
-			float noiseVal = noise.GetNoise((float) x * noiseScale, (float) z * noiseScale);
-			noiseVal = (noiseVal + 1.0f) * 0.5f;
-			float terrainHeight = noiseVal * 100.0f;
-
-			Vertex v;
-			v.position = glm::vec3(worldX, terrainHeight, worldZ);
-			v.normal = glm::vec3(0.0f, 1.0f, 0.0f);
-			v.color = glm::vec3(0.5f, 0.8f, 0.3f);
-			v.textureUV = glm::vec2(((float)x / (float)(width - 1)) * 100, ((float) z / (float)(height - 1)) * 100);
-			v.height = terrainHeight;
-
-			vertices.push_back(v);
-		}
-	}
-
-	return vertices;
-}
-
-std::vector<GLuint> generateTerrainIndices(unsigned int width, unsigned int height)
-{
-	std::vector<GLuint> indices;
-	indices.reserve((width - 1) * (height - 1) * 6);
-
-	for (unsigned int z = 0; z < height - 1; z++)
-	{
-		for (unsigned int x = 0; x < width - 1; x++)
-		{
-			GLuint topLeft = z * width + x;
-			GLuint topRight = z * width + (x + 1);
-			GLuint bottomLeft = (z + 1) * width + x;
-			GLuint bottomRight = (z + 1) * width + (x + 1);
-
-			indices.push_back(topLeft);
-			indices.push_back(bottomLeft);
-			indices.push_back(topRight);
-
-			indices.push_back(topRight);
-			indices.push_back(bottomLeft);
-			indices.push_back(bottomRight);
-		}
-	}
-	return indices;
-}
-
-
 int main()
 {
 	glfwInit();
@@ -196,57 +137,26 @@ int main()
 	// Creates camera object
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
 	
-	// Terrain generation
-	unsigned int terrainSize = 100;
-	float cellSize = 1.0f;
-	float noiseScale = 0.1f;
-
-	std::vector<Vertex> terrainVertices = generateTerrainVertices(terrainSize, terrainSize, cellSize, noiseScale);
-	std::vector<GLuint> terrainIndices = generateTerrainIndices(terrainSize, terrainSize);
-	std::vector<Texture> terrainTextures{Texture("Textures/GrassDiffuse.jpg", "diffuse", 0)};
-
-	Mesh terrainMesh(terrainVertices, terrainIndices, terrainTextures);
-	float terrainYOffset = -75.0f;
-	glm::mat4 terrainModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f * (terrainSize / 2), terrainYOffset, -1.0f * (terrainSize / 2)));
-
 	// Add tree models
 	Model tree("Models/MyTree/scene.gltf");
-	float treeYOffset = terrainYOffset - 0.1f;
-
-	int numberOfTrees = 100;
-	std::vector<glm::vec3> treePositions;
-	treePositions.reserve(numberOfTrees);
-
-	std::mt19937 randomNumberGenerator;
-	randomNumberGenerator.seed(std::random_device()());
-	std::uniform_real_distribution<float> distX(0.0f, terrainSize * cellSize);
-	std::uniform_real_distribution<float> distZ(0.0f, terrainSize * cellSize);
-
-	for (int i = 0; i < numberOfTrees; ++i)
-	{
-		float x = distX(randomNumberGenerator);
-		float z = distZ(randomNumberGenerator);
-
-		float gridX = x / cellSize;
-		float gridZ = z / cellSize;
-
-		int ix = static_cast<int>(round(gridX));
-		int iz = static_cast<int>(round(gridZ));
-
-		ix = glm::clamp(ix, 0, static_cast<int>(terrainSize - 1));
-		iz = glm::clamp(iz, 0, static_cast<int>(terrainSize - 1));
-
-		float heightVal = terrainVertices[iz * terrainSize + ix].position.y;
-
-		float worldX = x + (-1.0f * (terrainSize / 2));
-		float worldZ = z + (-1.0f * (terrainSize / 2));
-		float worldY = heightVal + treeYOffset;
-
-		treePositions.emplace_back(glm::vec3(worldX, worldY, worldZ));
-	}
+	glm::mat4 treeModel = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
 
 	Model ufo("Models/Ufo/scene.gltf");
-	glm::mat4 ufoModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -15.0f, 0.0f));
+	glm::mat4 ufoModel = glm::mat4(1.0f);
+
+	// Terrain
+	float terrainSize = 1000.0f;               // 100 units
+	unsigned int terrainResolution = 2048;      // 256x256 vertices
+	float terrainHeightScale = 1.0f;         // Height multiplier
+	float terrainNoiseFrequency = 1.0f;       // Frequency for noise
+
+	// Paths to terrain textures
+	std::string terrainDiffusePath = "Textures/GrassDiffuse.jpg";
+	std::string terrainSpecularPath = "Textures/GrassSpecular.jpg";
+
+	// Instantiate Terrain
+	Terrain terrain(terrainSize, terrainResolution, terrainHeightScale, terrainNoiseFrequency, terrainDiffusePath, terrainSpecularPath);
+	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f, 200.0f, 1000.0f));
 
 	// Skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -429,15 +339,9 @@ int main()
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 
-		// Draw scene for shadow map
-		for (const auto& position : treePositions)
-		{			
-			glm::mat4 treeModel = glm::translate(glm::mat4(1.0f), position);
-			treeModel = glm::scale(treeModel, glm::vec3(2.0f, 2.0f, 2.0f));
-			tree.Draw(shadowMapProgram, camera, treeModel);
-		}
+		// Draw scene for shadow 			
 		ufo.Draw(shadowMapProgram, camera, ufoModel);
-		terrainMesh.Draw(shadowMapProgram, camera, terrainModel);
+		tree.Draw(shadowMapProgram, camera, treeModel);
 
 		// Switch back to the default
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -449,7 +353,7 @@ int main()
 
 		// Handles camera
 		camera.Inputs(window);
-		camera.UpdateMatrix(45.0f, 0.1f, 1000.0f);
+		camera.UpdateMatrix(45.0f, 0.1f, 10000.0f);
 
 		// Send the light matrix to the shader
 		shaderProgram.Activate();
@@ -483,15 +387,11 @@ int main()
 		glDepthFunc(GL_LESS);
 
 		// Draw the normal scene
-		for (const auto& position : treePositions)
-		{
-			glm::mat4 treeModel = glm::translate(glm::mat4(1.0f), position);
-			treeModel = glm::scale(treeModel, glm::vec3(2.0f, 2.0f, 2.0f));
-			tree.Draw(shaderProgram, camera, treeModel);
-		}
-		ufo.Draw(shaderProgram, camera, ufoModel);
-		terrainMesh.Draw(shaderProgram, camera, terrainModel);
+		terrain.Draw(shaderProgram, camera, terrainModel);
 
+		ufo.Draw(shaderProgram, camera, ufoModel);
+		tree.Draw(shaderProgram, camera, treeModel);
+		
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, FBO);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcessingFBO);
 		glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
