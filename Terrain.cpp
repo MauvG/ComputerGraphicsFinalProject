@@ -109,7 +109,12 @@ void Terrain::CalculateNormals(std::vector<Vertex>& vertices, const std::vector<
 
 void Terrain::Draw(Shader& shader, Camera& camera, glm::mat4 model)
 {
+    shader.Activate();
+    glUniform1i(glGetUniformLocation(shader.id, "blendTextures"), true);
+
     terrainMesh->Draw(shader, camera, model);
+
+    glUniform1i(glGetUniformLocation(shader.id, "blendTextures"), false);
 }
 
 float Terrain::GetHeightAt(float x, float z) const

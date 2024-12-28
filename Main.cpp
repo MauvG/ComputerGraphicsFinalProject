@@ -244,7 +244,7 @@ int main()
 		// Draw skybox
 		skybox.Draw(skyboxShader, camera, width, height);
 
-		// Draw scene
+		// Draw scene		
 		terrain.Draw(defaultShader, camera, terrainModel);
 
 		ufo.Draw(defaultShader, camera, ufoModel);

@@ -39,10 +39,6 @@ void Mesh::Draw(Shader& shader, Camera& camera, glm::mat4 matrix, glm::vec3 tran
 		{
 			num = std::to_string(diffuseNum++);
 		}
-		else if (type == "specular")
-		{
-			num = std::to_string(specularNum++);
-		}
 		
 		textures[i].TextureUnit(shader, (type + num).c_str(), i);
 		textures[i].Bind();

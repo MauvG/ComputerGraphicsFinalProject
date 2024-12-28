@@ -11,17 +11,24 @@ in float height;
 
 uniform sampler2D diffuse0; 
 uniform sampler2D diffuse1; 
+uniform bool blendTextures;
+
 uniform sampler2D shadowMap;
 
 uniform vec4 lightColor;
 uniform vec3 lightPosition;
 uniform vec3 cameraPosition;
 
-vec4 blendTextures()
+vec4 blendColor()
 {
 	float heightThreshold = -10.0f;
     vec4 textureOne = texture(diffuse0, textureCoordinate);
     vec4 textureTwo = texture(diffuse1, textureCoordinate);
+
+	if (!blendTextures)
+	{
+		return textureOne;
+	}
 
     float blendFactor = smoothstep(heightThreshold - 10.0f, heightThreshold + 10.0, height);
     vec4 blendedColor = mix(textureOne, textureTwo, blendFactor);
@@ -83,6 +90,6 @@ vec4 directLight(vec4 blendedColor)
 void main()
 {
 	
-	vec4 blendedColor = blendTextures();
+	vec4 blendedColor = blendColor();
 	FragColor = directLight(blendedColor);
 }
