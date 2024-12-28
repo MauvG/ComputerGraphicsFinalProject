@@ -1,5 +1,6 @@
 #include "Model.h"
 #include "Terrain.h"
+#include "Skybox.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> 
@@ -18,65 +19,6 @@ float gamma = 3.0f;
 
 float currentAnimationTime = 0.0f;
 float lastFrameTime = 0.0f;
-
-float skyboxVertices[] = {
-	// front
-	-1.0f,  1.0f,  1.0f,   1.0f / 4.0f,   1.998f / 3.0f,
-	 1.0f,  1.0f,  1.0f,   0.0f,          1.998f / 3.0f,
-	 1.0f, -1.0f,  1.0f,   0.0f,          1.002f / 3.0f,
-	-1.0f, -1.0f,  1.0f,   1.0f / 4.0f,   1.002f / 3.0f,
-
-	// left
-	-1.0f,  1.0f, -1.0f,   2.0f / 4.0f,   2.0f / 3.0f,
-	-1.0f,  1.0f,  1.0f,   1.0f / 4.0f,   2.0f / 3.0f,
-	-1.0f, -1.0f,  1.0f,   1.0f / 4.0f,   1.0f / 3.0f,
-	-1.0f, -1.0f, -1.0f,   2.0f / 4.0f,   1.0f / 3.0f,
-
-	// back
-	 1.0f,  1.0f, -1.0f,   3.0f / 4.0f,   1.998f / 3.0f,
-	-1.0f,  1.0f, -1.0f,   2.0f / 4.0f,   1.998f / 3.0f,
-	-1.0f, -1.0f, -1.0f,   2.0f / 4.0f,   1.002f / 3.0f,
-	 1.0f, -1.0f, -1.0f,   3.0f / 4.0f,   1.002f / 3.0f,
-
-	 // right
-	 1.0f,  1.0f,  1.0f,   1.0f,          1.998f / 3.0f,
-	 1.0f,  1.0f, -1.0f,   3.0f / 4.0f,   1.998f / 3.0f,
-	 1.0f, -1.0f, -1.0f,   3.0f / 4.0f,   1.002f / 3.0f,
-	 1.0f, -1.0f,  1.0f,   1.0f,          1.002f / 3.0f,
-
-	 // bottom
-	 -1.0f,  1.0f, -1.0f,   1.998f / 4.0f, 2.0f / 3.0f,
-	  1.0f,  1.0f, -1.0f,   1.998f / 4.0f, 2.998f / 3.0f,
-	  1.0f,  1.0f,  1.0f,   1.002f / 4.0f, 2.998f / 3.0f,
-	 -1.0f,  1.0f,  1.0f,   1.002f / 4.0f, 2.0f / 3.0f,
-
-	 // top
-	 -1.0f, -1.0f,  1.0f,   1.002f / 4.0f, 1.0f / 3.0f,
-	  1.0f, -1.0f,  1.0f,   1.002f / 4.0f, 0.002f / 3.0f,
-	  1.0f, -1.0f, -1.0f,   1.998f / 4.0f, 0.002f / 3.0f,
-	 -1.0f, -1.0f, -1.0f,   1.998f / 4.0f, 1.0f / 3.0f
-};
-
-unsigned int skyboxIndices[] = {
-	// front
-	0, 1, 2,
-	2, 3, 0,
-	// left
-	4, 5, 6,
-	6, 7, 4,
-	// back
-	8, 9, 10,
-	10, 11, 8,
-	// right
-	12, 13, 14,
-	14, 15, 12,
-	// bottom
-	16, 17, 18,
-	18, 19, 16,
-	// top
-	20, 21, 22,
-	22, 23, 20
-};
 
 float rectangleVertices[] =
 {
@@ -121,10 +63,10 @@ int main()
 	shaderProgram.Activate();
 	glUniform4f(glGetUniformLocation(shaderProgram.id, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
 	glUniform3f(glGetUniformLocation(shaderProgram.id, "lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
-	
+
 	skyboxShader.Activate();
 	glUniform1i(glGetUniformLocation(skyboxShader.id, "skybox"), 0);
-	
+
 	framebufferProgram.Activate();
 	glUniform1i(glGetUniformLocation(framebufferProgram.id, "screenTexture"), 0);
 	glUniform1f(glGetUniformLocation(framebufferProgram.id, "gamma"), gamma);
@@ -136,7 +78,7 @@ int main()
 
 	// Creates camera object
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
-	
+
 	// Add tree models
 	Model tree("Models/MyTree/scene.gltf");
 	glm::mat4 treeModel = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
@@ -172,54 +114,7 @@ int main()
 	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 10.0f, 1.0f));
 
 	// Skybox
-	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
-	glGenVertexArrays(1, &skyboxVAO);
-	glGenBuffers(1, &skyboxVBO);
-	glGenBuffers(1, &skyboxEBO);
-
-	glBindVertexArray(skyboxVAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), skyboxIndices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-
-	unsigned int skyboxTexture;
-	glGenTextures(1, &skyboxTexture);
-	glBindTexture(GL_TEXTURE_2D, skyboxTexture);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	int texWidth, texHeight, nrChannels;
-	unsigned char* data = stbi_load("Textures/Skybox.png", &texWidth, &texHeight, &nrChannels, 0);
-
-	if (data)
-	{
-		stbi_set_flip_vertically_on_load(false);
-
-		GLint format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-		glTexImage2D(GL_TEXTURE_2D, 0, format, texWidth, texHeight, 0, format, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		stbi_image_free(data);
-	}
-	else
-	{
-		std::cout << "Failed to load skybox texture!" << std::endl;
-		stbi_image_free(data);
-	}
+	Skybox skybox;
 
 	// Create Frame Buffer Object
 	unsigned int rectangleVAO, rectangleVBO;
@@ -243,7 +138,7 @@ int main()
 	glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, samples, GL_RGB16F, width, height, GL_TRUE);
 	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); 
+	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, framebufferTexture, 0);
 
@@ -290,13 +185,13 @@ int main()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	
+
 	float clampColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, clampColor);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMap, 0);
-	
+
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -319,7 +214,7 @@ int main()
 	// Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
-		
+
 		// Calculate deltaTime
 		float currentFrameTime = glfwGetTime();
 		float deltaTime = currentFrameTime - lastFrameTime;
@@ -378,33 +273,14 @@ int main()
 		glUniform1i(glGetUniformLocation(shaderProgram.id, "shadowMap"), 2);
 
 		// Draw skybox
-		skyboxShader.Activate();
-
-		glm::mat4 skyboxView = glm::mat4(glm::mat3(glm::lookAt(camera.position, camera.position + camera.orientation, camera.up)));
-		glm::mat4 skyboxProjection = glm::perspective(glm::radians(45.0f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
-
-		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.id, "view"), 1, GL_FALSE, glm::value_ptr(skyboxView));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxShader.id, "projection"), 1, GL_FALSE, glm::value_ptr(skyboxProjection));
-
-		glDepthMask(GL_FALSE);
-		glDepthFunc(GL_LEQUAL);
-
-		glBindVertexArray(skyboxVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, skyboxTexture);
-		glUniform1i(glGetUniformLocation(skyboxShader.id, "skybox"), 0);
-
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-		glDepthMask(GL_TRUE);
-		glDepthFunc(GL_LESS);
+		skybox.Draw(skyboxShader, camera, width, height);
 
 		// Draw the normal scene
 		terrain.Draw(shaderProgram, camera, terrainModel);
 
 		ufo.Draw(shaderProgram, camera, ufoModel);
 		tree.Draw(shaderProgram, camera, treeModel);
-		
+
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, FBO);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postProcessingFBO);
 		glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
