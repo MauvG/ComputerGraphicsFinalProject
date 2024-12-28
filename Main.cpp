@@ -61,6 +61,19 @@ int main()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_MULTISAMPLE);
 
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CCW);
+
+	// Fog
+	glm::vec3 fogColor(0.0, 0.3, 0.5);
+	float fogStart = 200.0f;
+	float fogEnd = 300.0f; 
+
+	defaultShader.Activate();
+	glUniform3f(glGetUniformLocation(defaultShader.id, "fogColor"), fogColor.x, fogColor.y, fogColor.z);
+	glUniform1f(glGetUniformLocation(defaultShader.id, "fogStart"), fogStart);
+	glUniform1f(glGetUniformLocation(defaultShader.id, "fogEnd"), fogEnd);
+
 	// Create camera object
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
 
@@ -76,11 +89,11 @@ int main()
 	glm::mat4 ufoModel = glm::mat4(1.0f);
 
 	// Terrain
-	float terrainSize = 1000.0f;                // Size of the terrain
-	unsigned int terrainResolution = 128;       // Resolution (number of vertices per axis)
+	float terrainSize = 10000.0f;                // Size of the terrain
+	unsigned int terrainResolution = 1024;       // Resolution (number of vertices per axis)
 	float terrainHeightScale = 200.0f;          // Height multiplier (increased for more variation)
 	float terrainNoiseFrequency = 0.002f;       // Base frequency for larger features
-	int terrainOctaves = 6;                     // Number of noise layers
+	int terrainOctaves = 16;                     // Number of noise layers
 	float terrainLacunarity = 2.0f;             // Frequency multiplier per octave
 	float terrainGain = 0.5f;                   // Amplitude multiplier per octave
 
@@ -95,11 +108,10 @@ int main()
 	);
 
 	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-	//terrainModel = glm::translate(terrainModel, glm::vec3(0.0f, -5.0f, 0.0f));
 
 	// Number of instances
-	const unsigned int numTrees = 2500;
-	const unsigned int numRocks = 1000;
+	const unsigned int numTrees = 10000;
+	const unsigned int numRocks = 10000;
 
 	std::vector<InstanceData> treeInstances;
 	treeInstances.reserve(numTrees);
@@ -232,7 +244,7 @@ int main()
 
 		// Handles camera
 		camera.Inputs(window);
-		camera.UpdateMatrix(45.0f, 0.1f, 1000.0f);
+		camera.UpdateMatrix(45.0f, 0.1f, fogEnd);
 
 		// Send the light matrix to the shader
 		defaultShader.Activate();
@@ -245,6 +257,8 @@ int main()
 		skybox.Draw(skyboxShader, camera, width, height);
 
 		// Draw scene		
+		glEnable(GL_CULL_FACE);
+
 		terrain.Draw(defaultShader, camera, terrainModel);
 
 		ufo.Draw(defaultShader, camera, ufoModel);
@@ -260,6 +274,8 @@ int main()
 		{
 			rock.Draw(defaultShader, camera, rockInstance.modelMatrix);
 		}
+
+		glDisable(GL_CULL_FACE);
 
 		// Bind fbo
 		framebuffer.Bind(framebufferShader);

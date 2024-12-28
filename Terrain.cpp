@@ -43,7 +43,7 @@ void Terrain::GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>
             vertex.position.x = -halfSize + x * step;
             vertex.position.z = -halfSize + z * step;
             vertex.position.y = noise.GetNoise(vertex.position.x, vertex.position.z) * heightScale;
-            float textureScale = 100;
+            float textureScale = 1000;
             vertex.textureUV = glm::vec2((static_cast<float>(x) / (resolution - 1)) * textureScale, (static_cast<float>(z) / (resolution - 1)) * textureScale);
             vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
             vertex.height = vertex.position.y;
