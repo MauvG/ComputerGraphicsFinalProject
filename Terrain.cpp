@@ -2,6 +2,7 @@
 #include <iostream>
 #include <algorithm>
 
+
 Terrain::Terrain(float size, unsigned int resolution, float heightScale, float noiseFrequency, int octaves, float lacunarity, float gain)
     : size(size), resolution(resolution), heightScale(heightScale), noiseFrequency(noiseFrequency), octaves(octaves), lacunarity(lacunarity), gain(gain), terrainMesh(nullptr)
 {
@@ -15,7 +16,8 @@ Terrain::Terrain(float size, unsigned int resolution, float heightScale, float n
     GenerateTerrain(vertices, indices);
     CalculateNormals(vertices, indices);
 
-    std::vector<Texture> textures{ Texture("Textures/Grass1.jpg", "diffuse", 0), Texture("Textures/Grass2.jpg", "diffuse", 1) };
+    std::vector <Texture> textures{ Texture("Textures/Grass1.jpg", "diffuse", 0), Texture("Textures/Grass2.jpg", "diffuse", 1) };
+    Terrain::textureScale = size / 100;
 
     terrainMesh = new Mesh(vertices, indices, textures);
 }
@@ -43,14 +45,12 @@ void Terrain::GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>
             vertex.position.x = -halfSize + x * step;
             vertex.position.z = -halfSize + z * step;
             vertex.position.y = noise.GetNoise(vertex.position.x, vertex.position.z) * heightScale;
-            float textureScale = 2500;
-            vertex.textureUV = glm::vec2((static_cast<float>(x) / (resolution - 1)) * textureScale, (static_cast<float>(z) / (resolution - 1)) * textureScale);
+            //vertex.textureUV = glm::vec2((static_cast<float>(x) / (resolution - 1)) * textureScale, (static_cast<float>(z) / (resolution - 1)) * textureScale);
+            vertex.textureUV = glm::vec2((vertex.position.x / size) * textureScale, (vertex.position.z / size) * textureScale);
             vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
             vertex.height = vertex.position.y;
             vertex.normal = glm::vec3(0.0f, 0.0f, 0.0f);
             vertices.push_back(vertex);
-
-            
         }
     }
 
@@ -151,3 +151,28 @@ float Terrain::GetHeightAt(float x, float z) const
         return height;
     }
 }
+
+void Terrain::UpdateTerrain(float offsetX, float offsetZ)
+{
+    float step = size / (resolution - 1);
+    float halfSize = size / 2.0f;
+    
+
+    for (unsigned int z = 0; z < resolution; ++z)
+    {
+        for (unsigned int x = 0; x < resolution; ++x)
+        {
+            unsigned int index = z * resolution + x;
+            float worldX = -halfSize + x * step + offsetX;
+            float worldZ = -halfSize + z * step + offsetZ;
+            vertices[index].position.y = noise.GetNoise(worldX, worldZ) * heightScale;
+            vertices[index].height = vertices[index].position.y;
+            vertices[index].textureUV = glm::vec2(worldX / textureScale, worldZ / textureScale);
+        }
+    }
+
+    CalculateNormals(vertices, indices);
+
+    terrainMesh->UpdateVertices(vertices, indices);
+}
+

@@ -92,4 +92,27 @@ void Mesh::Draw(Shader& shader, Camera& camera, glm::mat4 matrix, glm::vec3 tran
 		glDrawElementsInstanced(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0, instancing);
 	}
 
+	vao.Unbind();
+	glActiveTexture(GL_TEXTURE0);
+
+}
+
+void Mesh::UpdateVertices(std::vector<Vertex>& newVertices, std::vector <GLuint>& newIndices)
+{
+	Mesh::vertices = newVertices;
+	Mesh::indices = newIndices;
+
+	vao.Bind();
+	VBO vbo(newVertices);
+	EBO ebo(newIndices);
+
+	vao.LinkAttribute(vbo, 0, 3, GL_FLOAT, sizeof(Vertex), (void*)0);
+	vao.LinkAttribute(vbo, 1, 3, GL_FLOAT, sizeof(Vertex), (void*)(3 * sizeof(float)));
+	vao.LinkAttribute(vbo, 2, 3, GL_FLOAT, sizeof(Vertex), (void*)(6 * sizeof(float)));
+	vao.LinkAttribute(vbo, 3, 2, GL_FLOAT, sizeof(Vertex), (void*)(9 * sizeof(float)));
+	vao.LinkAttribute(vbo, 4, 1, GL_FLOAT, sizeof(Vertex), (void*)offsetof(Vertex, height));
+
+	vao.Unbind();
+	vbo.Unbind();
+	ebo.Unbind();
 }

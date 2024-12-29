@@ -25,7 +25,7 @@ void Camera::Matrix(Shader& shader, const char* uniform)
 
 void Camera::Inputs(GLFWwindow* window)
 {
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	/*if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
 		position += speed * orientation;
 	}
@@ -40,7 +40,8 @@ void Camera::Inputs(GLFWwindow* window)
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
 		position += speed * glm::normalize(glm::cross(orientation, up));
-	}
+	}*/
+
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
 	{
 		position += speed * up;
@@ -92,4 +93,14 @@ void Camera::Inputs(GLFWwindow* window)
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		firstClick = true;
 	}
+}
+
+glm::vec3 Camera::GetForward() const
+{
+	return glm::normalize(orientation);
+}
+
+glm::vec3 Camera::GetRight() const
+{
+	return glm::normalize(glm::cross(orientation, up));
 }

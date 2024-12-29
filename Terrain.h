@@ -19,6 +19,7 @@ public:
 
     float GetHeightAt(float x, float z) const;
     float GetSize() const { return size; }
+    void UpdateTerrain(float offsetX, float offsetZ);
 
 private:
     Mesh* terrainMesh;
@@ -33,6 +34,7 @@ private:
 
     std::vector<Vertex> vertices;
     std::vector<GLuint> indices;
+    int textureScale;
 
     void GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>& indices);
     void CalculateNormals(std::vector<Vertex>& vertices, const std::vector<GLuint>& indices);

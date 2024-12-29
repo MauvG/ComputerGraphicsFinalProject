@@ -32,5 +32,8 @@ public:
 	void UpdateMatrix(float fovDegree, float nearPlane, float farPlane);
 	void Matrix(Shader& shader, const char* uniform);
 	void Inputs(GLFWwindow* window);
+
+	glm::vec3 GetForward() const;
+	glm::vec3 GetRight() const;
 };
 #endif

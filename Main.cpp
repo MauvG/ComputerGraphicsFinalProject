@@ -68,8 +68,8 @@ int main()
 
 	// Fog
 	glm::vec3 fogColor(0.0, 0.3, 0.5);
-	float fogStart = 200.0f;
-	float fogEnd = 300.0f; 
+	float fogStart = 50.0f;
+	float fogEnd = 100.0f; 
 
 	defaultShader.Activate();
 	glUniform3f(glGetUniformLocation(defaultShader.id, "fogColor"), fogColor.x, fogColor.y, fogColor.z);
@@ -87,12 +87,17 @@ int main()
 	Model ufo("Models/Ufo/scene.gltf");
 	glm::mat4 ufoModel = glm::mat4(1.0f);
 
+	// Terrain movement
+	float terrainOffsetX = 0.0;
+	float terrainOffsetZ = 0.0;
+	float moveSpeed = 10.0f;
+
 	// Terrain
-	float terrainSize = 25000.0f;                // Size of the terrain
-	unsigned int terrainResolution = 1024;       // Resolution (number of vertices per axis)
-	float terrainHeightScale = 200.0f;          // Height multiplier (increased for more variation)
-	float terrainNoiseFrequency = 0.002f;       // Base frequency for larger features
-	int terrainOctaves = 16;                     // Number of noise layers
+	float terrainSize = fogEnd + 100;                // Size of the terrain
+	unsigned int terrainResolution = 256;       // Resolution (number of vertices per axis)
+	float terrainHeightScale = 20.0f;          // Height multiplier (adjust as needed)
+	float terrainNoiseFrequency = 0.02f;        // Base frequency for larger features
+	int terrainOctaves = 4;                     // Number of noise layers
 	float terrainLacunarity = 2.0f;             // Frequency multiplier per octave
 	float terrainGain = 0.5f;                   // Amplitude multiplier per octave
 
@@ -109,8 +114,8 @@ int main()
 	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
 	// Number of instances
-	const unsigned int numTrees = 100000;
-	const unsigned int numRocks = 50000;
+	const unsigned int numTrees = 10;
+	const unsigned int numRocks = 10;
 
 	std::vector<glm::mat4> treeInstances;
 	treeInstances.reserve(numTrees);
@@ -181,8 +186,8 @@ int main()
 	Shadows shadows(8192, 8192);
 	
 	// Light for shadow
-	//glm::mat4 orthgonalProjection = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
-	glm::mat4 orthgonalProjection = glm::ortho(-200.0f, 200.0f, -200.0f, 200.0f, 0.1f, 75.0f);
+	glm::mat4 orthgonalProjection = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+	//glm::mat4 orthgonalProjection = glm::ortho(-200.0f, 200.0f, -200.0f, 200.0f, 0.1f, 75.0f);
 	glm::mat4 lightView = glm::lookAt(20.0f * lightPosition, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 lightProjection = orthgonalProjection * lightView;
 
@@ -235,6 +240,38 @@ int main()
 			counter = 0;
 		}
 
+		// Move terrain
+		bool terrainMoved = false;
+		glm::vec3 cameraForward = glm::normalize(camera.GetForward());
+		glm::vec3 cameraRight = glm::normalize(glm::cross(cameraForward, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+			terrainOffsetX += cameraForward.x * moveSpeed * deltaTime;
+			terrainOffsetZ += cameraForward.z * moveSpeed * deltaTime;
+			terrainMoved = true;
+		}
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+			terrainOffsetX -= cameraForward.x * moveSpeed * deltaTime;
+			terrainOffsetZ -= cameraForward.z * moveSpeed * deltaTime;
+			terrainMoved = true;
+		}
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+			terrainOffsetX -= cameraRight.x * moveSpeed * deltaTime;
+			terrainOffsetZ -= cameraRight.z * moveSpeed * deltaTime;
+			terrainMoved = true;
+		}
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+			terrainOffsetX += cameraRight.x * moveSpeed * deltaTime;
+			terrainOffsetZ += cameraRight.z * moveSpeed * deltaTime;
+			terrainMoved = true;
+		}
+
+		if (terrainMoved)
+		{
+			terrain.UpdateTerrain(terrainOffsetX, terrainOffsetZ);
+			terrainModel = glm::mat4(1.0f);
+		}
+
 		// Depth testing needed for Shadow Map
 		shadows.EnableDepthTest();
 
@@ -251,7 +288,7 @@ int main()
 
 		// Handles camera
 		camera.Inputs(window);
-		camera.UpdateMatrix(45.0f, 0.1f, fogEnd);
+		camera.UpdateMatrix(45.0f, 0.1f, fogEnd + 100);
 
 		// Send the light matrix to the shader
 		defaultShader.Activate();
