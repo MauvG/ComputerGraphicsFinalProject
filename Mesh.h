@@ -36,6 +36,7 @@ public:
 	);
 
 	void UpdateVertices(std::vector<Vertex>& newVertices, std::vector <GLuint>& newIndices);
+	void UpdateInstanceMatrix(unsigned int instancing, std::vector <glm::mat4> instanceMatrix);
 };
 
 #endif

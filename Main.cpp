@@ -6,6 +6,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <random>
+#include <set>
 
 const unsigned int width = 1920;
 const unsigned int height = 1080;
@@ -113,68 +114,17 @@ int main()
 
 	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
-	// Number of instances
-	const unsigned int numTrees = 10;
-	const unsigned int numRocks = 10;
+	// Trees
+	float treeNoise = 5000.0f;
+	float treeScale = 0.5f;
+	std::vector<glm::mat4> treeInstances = terrain.GenerateObjectPositions(3.0f, treeNoise, treeScale, terrainOffsetX, terrainOffsetZ);
+	Model tree("Models/MyTree/scene.gltf", treeInstances.size(), treeInstances);
 
-	std::vector<glm::mat4> treeInstances;
-	treeInstances.reserve(numTrees);
-
-	std::vector<glm::mat4> rockInstances;
-	rockInstances.reserve(numRocks);
-
-	// Random number generators
-	std::random_device rd;
-	std::mt19937 gen(rd());
-
-	std::uniform_real_distribution<float> posDist(-terrainSize / 2.0f, terrainSize / 2.0f);
-	std::uniform_real_distribution<float> scaleDist(1.0f, 2.0f);
-	std::uniform_real_distribution<float> rotDist(0.0f, 360.0f);
-
-	// Generate tree instances
-	for (unsigned int i = 0; i < numTrees; ++i)
-	{
-		float x = posDist(gen);
-		float z = posDist(gen);
-		float y = terrain.GetHeightAt(x, z) - 0.25f;
-
-		float scale = scaleDist(gen) * 3.0f;
-		float rotation = rotDist(gen);
-
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(x, y, z));
-		model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(scale));
-
-		model = glm::translate(model, glm::vec3(0.0f, 2.5f, 0.0f)); // offset position		
-
-		treeInstances.push_back(model);
-	}
-
-	// Generate rock instances
-	for (unsigned int i = 0; i < numRocks; ++i)
-	{
-		float x = posDist(gen);
-		float z = posDist(gen);
-		float y = terrain.GetHeightAt(x, z) - 0.25f;
-
-		float scale = scaleDist(gen) * 0.03;
-		float rotation = rotDist(gen);
-
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(x, y, z));
-		model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(scale));
-
-		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // fix rotation
-		rockInstances.push_back({ model });
-	}
-	
-	// Draw trees and rocks using instancing
-
-	Model tree("Models/MyTree/scene.gltf", numTrees, treeInstances);
-
-	Model rock("Models/MyRock/scene.gltf", numRocks, rockInstances);
+	// Rocks
+	//float rockNoise = 300.0f;
+	//float rockScale = 0.01f;
+	//std::vector<glm::mat4> rockInstances = terrain.GenerateObjectPositions(3.0f, treeNoise, rockScale, terrainOffsetX, terrainOffsetZ);
+	//Model rock("Models/MyRock/scene.gltf", rockInstances.size(), rockInstances);
 
 	// Skybox
 	Skybox skybox;
@@ -270,6 +220,20 @@ int main()
 		{
 			terrain.UpdateTerrain(terrainOffsetX, terrainOffsetZ);
 			terrainModel = glm::mat4(1.0f);
+
+			if (timeDifference > 1.0 / 10.0)
+			{
+
+				// Generate positions for trees
+				treeInstances = terrain.GenerateObjectPositions(3, treeNoise, treeScale, terrainOffsetX, terrainOffsetZ);
+				tree.UpdateInstances(static_cast<unsigned int>(treeInstances.size()), treeInstances);
+
+				// Generate positions for rocks
+				//rockInstances = terrain.GenerateObjectPositions(3, rockNoise, rockScale, terrainOffsetX, terrainOffsetZ);
+				//rock.UpdateInstances(static_cast<unsigned int>(rockInstances.size()), rockInstances);
+
+				//std::cout << "Trees: " << treeInstances.size() << " Rocks: " << rockInstances.size() << std::endl;
+			}
 		}
 
 		// Depth testing needed for Shadow Map
@@ -281,7 +245,7 @@ int main()
 	
 		//// Draw all trees and rocks for shadow using instancing
 		tree.Draw(shadowMapShader, camera);
-		rock.Draw(shadowMapShader, camera);
+		//rock.Draw(shadowMapShader, camera);
 
 		// Switch back to the default
 		framebuffer.Default();
@@ -315,7 +279,7 @@ int main()
 		// Draw all trees and rocks using instancing
 		instanceShader.Activate();
 		tree.Draw(instanceShader, camera);
-		rock.Draw(instanceShader, camera);
+		//rock.Draw(instanceShader, camera);
 
 		glDisable(GL_CULL_FACE);
 

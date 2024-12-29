@@ -12,7 +12,8 @@ VBO::VBO(std::vector<glm::mat4>& mat4s)
 {
 	glGenBuffers(1, &id);
 	glBindBuffer(GL_ARRAY_BUFFER, id);
-	glBufferData(GL_ARRAY_BUFFER, mat4s.size() * sizeof(glm::mat4), mat4s.data(), GL_STATIC_DRAW);
+	//glBufferData(GL_ARRAY_BUFFER, mat4s.size() * sizeof(glm::mat4), mat4s.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, mat4s.size() * sizeof(glm::mat4), mat4s.data(), GL_DYNAMIC_DRAW);
 }
 
 void VBO::Bind()

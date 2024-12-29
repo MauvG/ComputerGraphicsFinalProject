@@ -1,7 +1,7 @@
 #include "Terrain.h"
 #include <iostream>
 #include <algorithm>
-
+#include <set>
 
 Terrain::Terrain(float size, unsigned int resolution, float heightScale, float noiseFrequency, int octaves, float lacunarity, float gain)
     : size(size), resolution(resolution), heightScale(heightScale), noiseFrequency(noiseFrequency), octaves(octaves), lacunarity(lacunarity), gain(gain), terrainMesh(nullptr)
@@ -176,3 +176,62 @@ void Terrain::UpdateTerrain(float offsetX, float offsetZ)
     terrainMesh->UpdateVertices(vertices, indices);
 }
 
+std::vector<glm::mat4> Terrain::GenerateObjectPositions(int R, float noiseScale, float sizeScale, float offsetX, float offsetZ) const
+{   
+    std::vector<glm::mat4> instances;
+    // Create a 2D grid to store noise values
+    std::vector<std::vector<double>> blueNoise(resolution, std::vector<double>(resolution, 0.0));
+
+    // Generate blue noise by using high-frequency noise based on world positions
+    for (unsigned int y = 0; y < resolution; y++) {
+        for (unsigned int x = 0; x < resolution; x++) {
+            // Calculate world positions based on current offsets
+            float worldX = (- size / 2.0f + x * (size / (resolution - 1)) + offsetX);
+            float worldZ = (- size / 2.0f + y * (size / (resolution - 1)) + offsetZ);
+
+            // Sample high-frequency noise for blue noise pattern
+            blueNoise[y][x] = noise.GetNoise(worldX * noiseScale / size, worldZ * noiseScale / size);
+        }
+    }
+
+    // Find local maxima in the blue noise grid
+    for (unsigned int yc = 0; yc < resolution; yc++) {
+        for (unsigned int xc = 0; xc < resolution; xc++) {
+            double currentValue = blueNoise[yc][xc];
+            bool isLocalMax = true;
+
+            // Iterate over the neighborhood defined by radius R
+            for (int dy = -R; dy <= R && isLocalMax; dy++) {
+                for (int dx = -R; dx <= R && isLocalMax; dx++) {
+                    // Optional circular check to ensure neighborhood is roughly circular
+                    if (dx * dx + dy * dy > R * (R + 1))
+                        continue;
+
+                    int xn = static_cast<int>(xc) + dx;
+                    int yn = static_cast<int>(yc) + dy;
+
+                    if (xn >= 0 && xn < static_cast<int>(resolution) && yn >= 0 && yn < static_cast<int>(resolution)) {
+                        if (blueNoise[yn][xn] > currentValue) {
+                            isLocalMax = false;
+                        }
+                    }
+                }
+            }
+
+            if (isLocalMax) {
+                // Get the world position from the vertex
+                const Vertex& vertex = vertices[yc * resolution + xc];
+                glm::vec3 position = glm::vec3(vertex.position.x, vertex.position.y + 1.25, vertex.position.z);
+
+                // Create a transformation matrix for the tree
+                glm::mat4 modelMatrix = glm::mat4(1.0f);
+                modelMatrix = glm::translate(modelMatrix, position);
+                modelMatrix = glm::scale(modelMatrix, glm::vec3(sizeScale));
+
+                instances.push_back(modelMatrix);
+            }
+        }
+    }
+
+    return instances;
+}

@@ -267,3 +267,14 @@ void Model::UpdateAnimation(float currentTime) {
         }
     }
 }
+
+void Model::UpdateInstances(unsigned int newInstancing, std::vector<glm::mat4> newInstanceMatrix)
+{
+    Model::instancing = instancing;
+    Model::instanceMatrix = instanceMatrix;
+
+    for (auto& mesh : meshes)
+    {
+        mesh.UpdateInstanceMatrix(newInstancing, newInstanceMatrix);
+    }
+}

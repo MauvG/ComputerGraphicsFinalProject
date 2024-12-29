@@ -116,3 +116,28 @@ void Mesh::UpdateVertices(std::vector<Vertex>& newVertices, std::vector <GLuint>
 	vbo.Unbind();
 	ebo.Unbind();
 }
+
+void Mesh::UpdateInstanceMatrix(unsigned int newInstancing, std::vector <glm::mat4> newInstanceMatrix)
+{
+	Mesh::instancing = newInstancing;
+
+	vao.Bind();
+	VBO instanceVBO(newInstanceMatrix);
+	
+	if (instancing != 1)
+	{
+		instanceVBO.Bind();
+		vao.LinkAttribute(instanceVBO, 5, 4, GL_FLOAT, sizeof(glm::mat4), (void*)0);
+		vao.LinkAttribute(instanceVBO, 6, 4, GL_FLOAT, sizeof(glm::mat4), (void*)(1 * sizeof(glm::vec4)));
+		vao.LinkAttribute(instanceVBO, 7, 4, GL_FLOAT, sizeof(glm::mat4), (void*)(2 * sizeof(glm::vec4)));
+		vao.LinkAttribute(instanceVBO, 8, 4, GL_FLOAT, sizeof(glm::mat4), (void*)(3 * sizeof(glm::vec4)));
+
+		glVertexAttribDivisor(5, 1);
+		glVertexAttribDivisor(6, 1);
+		glVertexAttribDivisor(7, 1);
+		glVertexAttribDivisor(8, 1);
+	}
+
+	vao.Unbind();
+	instanceVBO.Unbind();
+}

@@ -10,6 +10,7 @@
 #include <fastnoiselite/fast_noise_lite.h>
 #include <stb/stb_image.h>
 #include <string>
+#include "Model.h"
 
 class Terrain {
 public:
@@ -20,6 +21,8 @@ public:
     float GetHeightAt(float x, float z) const;
     float GetSize() const { return size; }
     void UpdateTerrain(float offsetX, float offsetZ);
+    std::vector<glm::mat4> GenerateObjectPositions(int R, float noiseScale, float sizeScale, float offsetX, float offsetZ) const;
+
 
 private:
     Mesh* terrainMesh;
@@ -38,7 +41,7 @@ private:
 
     void GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>& indices);
     void CalculateNormals(std::vector<Vertex>& vertices, const std::vector<GLuint>& indices);
-
+    
     FastNoiseLite noise;
 };
 

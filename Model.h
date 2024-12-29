@@ -25,6 +25,7 @@ public:
     void Draw(Shader& shader, Camera& camera, glm::mat4 model = glm::mat4(1.0f));
 
     void UpdateAnimation(float currentTime);
+    void UpdateInstances(unsigned int newInstancing, std::vector<glm::mat4> newInstanceMatrix);
 
 private:
     std::string filePath;
