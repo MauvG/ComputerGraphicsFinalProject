@@ -87,11 +87,11 @@ int main()
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
 
 	// Terrain
-	float terrainSize = cameraEnd;                // Size of the terrain
+	float terrainSize = cameraEnd;              // Size of the terrain
 	unsigned int terrainResolution = 512;       // Resolution (number of vertices per axis)
-	float terrainHeightScale = 20.0f;          // Height multiplier (adjust as needed)
+	float terrainHeightScale = 20.0f;           // Height multiplier (adjust as needed)
 	float terrainNoiseFrequency = 0.02f;        // Base frequency for larger features
-	int terrainOctaves = 4;                     // Number of noise layers
+	int terrainOctaves = 4;						// Number of noise layers
 	float terrainLacunarity = 2.0f;             // Frequency multiplier per octave
 	float terrainGain = 0.5f;                   // Amplitude multiplier per octave
 
