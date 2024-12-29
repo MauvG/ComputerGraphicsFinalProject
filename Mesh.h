@@ -16,7 +16,14 @@ public:
 	std::vector <Texture> textures;
 	VAO vao;
 
-	Mesh(std::vector <Vertex>& vertices, std::vector <GLuint>& indices, std::vector <Texture>& textures);
+	unsigned int instancing;
+
+	Mesh(std::vector <Vertex>& vertices,
+		std::vector <GLuint>& indices,
+		std::vector <Texture>& textures,
+		unsigned int instancing = 1,
+		std::vector <glm::mat4> instanceMatrix = {}
+	);
 
 	void Draw
 	(

@@ -13,10 +13,6 @@ const unsigned int height = 1080;
 const unsigned int samples = 2;
 const float gamma = 3.0f;
 
-struct InstanceData {
-	glm::mat4 modelMatrix;
-};
-
 int main()
 {
 	// Setup
@@ -43,6 +39,8 @@ int main()
 	Shader skyboxShader("skybox.vert", "skybox.frag");
 	Shader framebufferShader("framebuffer.vert", "framebuffer.frag");
 	Shader shadowMapShader("shadowMap.vert", "shadowMap.frag");
+	Shader instanceShader("instance.vert", "default.frag");
+
 
 	glm::vec4 lightColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 lightPosition = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -57,6 +55,10 @@ int main()
 	framebufferShader.Activate();
 	glUniform1i(glGetUniformLocation(framebufferShader.id, "screenTexture"), 0);
 	glUniform1f(glGetUniformLocation(framebufferShader.id, "gamma"), gamma);
+
+	instanceShader.Activate();
+	glUniform4f(glGetUniformLocation(instanceShader.id, "lightColor"), lightColor.x, lightColor.y, lightColor.z, lightColor.w);
+	glUniform3f(glGetUniformLocation(instanceShader.id, "lightPosition"), lightPosition.x, lightPosition.y, lightPosition.z);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_MULTISAMPLE);
@@ -74,22 +76,19 @@ int main()
 	glUniform1f(glGetUniformLocation(defaultShader.id, "fogStart"), fogStart);
 	glUniform1f(glGetUniformLocation(defaultShader.id, "fogEnd"), fogEnd);
 
+	instanceShader.Activate();
+	glUniform3f(glGetUniformLocation(instanceShader.id, "fogColor"), fogColor.x, fogColor.y, fogColor.z);
+	glUniform1f(glGetUniformLocation(instanceShader.id, "fogStart"), fogStart);
+	glUniform1f(glGetUniformLocation(instanceShader.id, "fogEnd"), fogEnd);
+
 	// Create camera object
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
-
-	Model tree("Models/MyTree/scene.gltf");
-	glm::mat4 treeModelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 3.0f));
-	//treeModelMatrix = glm::translate(treeModelMatrix, glm::vec3(-5.0f, 0.0f, 0.0f));
-
-	Model rock("Models/MyRock/scene.gltf");
-	//glm::mat4 rockModelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f));
-	//rockModelMatrix = glm::translate(rockModelMatrix, glm::vec3(5.0f, 0.0f, 0.0f));
 
 	Model ufo("Models/Ufo/scene.gltf");
 	glm::mat4 ufoModel = glm::mat4(1.0f);
 
 	// Terrain
-	float terrainSize = 10000.0f;                // Size of the terrain
+	float terrainSize = 25000.0f;                // Size of the terrain
 	unsigned int terrainResolution = 1024;       // Resolution (number of vertices per axis)
 	float terrainHeightScale = 200.0f;          // Height multiplier (increased for more variation)
 	float terrainNoiseFrequency = 0.002f;       // Base frequency for larger features
@@ -110,13 +109,13 @@ int main()
 	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
 	// Number of instances
-	const unsigned int numTrees = 10000;
-	const unsigned int numRocks = 10000;
+	const unsigned int numTrees = 100000;
+	const unsigned int numRocks = 50000;
 
-	std::vector<InstanceData> treeInstances;
+	std::vector<glm::mat4> treeInstances;
 	treeInstances.reserve(numTrees);
 
-	std::vector<InstanceData> rockInstances;
+	std::vector<glm::mat4> rockInstances;
 	rockInstances.reserve(numRocks);
 
 	// Random number generators
@@ -134,7 +133,7 @@ int main()
 		float z = posDist(gen);
 		float y = terrain.GetHeightAt(x, z) - 0.25f;
 
-		float scale = scaleDist(gen) * 10.0f;
+		float scale = scaleDist(gen) * 3.0f;
 		float rotation = rotDist(gen);
 
 		glm::mat4 model = glm::mat4(1.0f);
@@ -142,7 +141,9 @@ int main()
 		model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::scale(model, glm::vec3(scale));
 
-		treeInstances.push_back({ model });
+		model = glm::translate(model, glm::vec3(0.0f, 2.5f, 0.0f)); // offset position		
+
+		treeInstances.push_back(model);
 	}
 
 	// Generate rock instances
@@ -152,7 +153,7 @@ int main()
 		float z = posDist(gen);
 		float y = terrain.GetHeightAt(x, z) - 0.25f;
 
-		float scale = scaleDist(gen);
+		float scale = scaleDist(gen) * 0.03;
 		float rotation = rotDist(gen);
 
 		glm::mat4 model = glm::mat4(1.0f);
@@ -160,9 +161,15 @@ int main()
 		model = glm::rotate(model, glm::radians(rotation), glm::vec3(0.0f, 1.0f, 0.0f));
 		model = glm::scale(model, glm::vec3(scale));
 
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)); // fix rotation
 		rockInstances.push_back({ model });
 	}
+	
+	// Draw trees and rocks using instancing
 
+	Model tree("Models/MyTree/scene.gltf", numTrees, treeInstances);
+
+	Model rock("Models/MyRock/scene.gltf", numRocks, rockInstances);
 
 	// Skybox
 	Skybox skybox;
@@ -174,13 +181,20 @@ int main()
 	Shadows shadows(8192, 8192);
 	
 	// Light for shadow
-	glm::mat4 orthgonalProjection = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+	//glm::mat4 orthgonalProjection = glm::ortho(-35.0f, 35.0f, -35.0f, 35.0f, 0.1f, 75.0f);
+	glm::mat4 orthgonalProjection = glm::ortho(-200.0f, 200.0f, -200.0f, 200.0f, 0.1f, 75.0f);
 	glm::mat4 lightView = glm::lookAt(20.0f * lightPosition, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 lightProjection = orthgonalProjection * lightView;
 
 	shadowMapShader.Activate();
 	glUniformMatrix4fv(glGetUniformLocation(shadowMapShader.id, "lightProjection"), 1, GL_FALSE, glm::value_ptr(lightProjection));
 	
+	defaultShader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(defaultShader.id, "lightProjection"), 1, GL_FALSE, glm::value_ptr(lightProjection));
+
+	instanceShader.Activate();
+	glUniformMatrix4fv(glGetUniformLocation(instanceShader.id, "lightProjection"), 1, GL_FALSE, glm::value_ptr(lightProjection));
+
 	// Animation
 	float currentAnimationTime = 0.0f;
 	float lastFrameTime = 0.0f;
@@ -225,19 +239,12 @@ int main()
 		shadows.EnableDepthTest();
 
 		// Draw scene for shadow
+		shadowMapShader.Activate();
 		ufo.Draw(shadowMapShader, camera, ufoModel);
-		
-		// Draw all trees for shadow
-		for (const auto& treeInstance : treeInstances)
-		{
-			tree.Draw(shadowMapShader, camera, treeInstance.modelMatrix);
-		}
-
-		// Draw all rocks for shadow
-		for (const auto& rockInstance : rockInstances)
-		{
-			rock.Draw(shadowMapShader, camera, rockInstance.modelMatrix);
-		}
+	
+		//// Draw all trees and rocks for shadow using instancing
+		tree.Draw(shadowMapShader, camera);
+		rock.Draw(shadowMapShader, camera);
 
 		// Switch back to the default
 		framebuffer.Default();
@@ -253,27 +260,25 @@ int main()
 		// Bind the Shadow Map
 		shadows.Bind(defaultShader);
 
+		instanceShader.Activate();
+		glUniformMatrix4fv(glGetUniformLocation(instanceShader.id, "lightProjection"), 1, GL_FALSE, glm::value_ptr(lightProjection));
+
+		shadows.Bind(instanceShader);
+
 		// Draw skybox
 		skybox.Draw(skyboxShader, camera, width, height);
 
 		// Draw scene		
 		glEnable(GL_CULL_FACE);
 
+		defaultShader.Activate();
 		terrain.Draw(defaultShader, camera, terrainModel);
-
 		ufo.Draw(defaultShader, camera, ufoModel);
 
-		// Draw all trees
-		for (const auto& treeInstance : treeInstances)
-		{	
-			tree.Draw(defaultShader, camera, treeInstance.modelMatrix);
-		}
-
-		// Draw all rocks
-		for (const auto& rockInstance : rockInstances)
-		{
-			rock.Draw(defaultShader, camera, rockInstance.modelMatrix);
-		}
+		// Draw all trees and rocks using instancing
+		instanceShader.Activate();
+		tree.Draw(instanceShader, camera);
+		rock.Draw(instanceShader, camera);
 
 		glDisable(GL_CULL_FACE);
 
@@ -287,8 +292,10 @@ int main()
 	// Clean up
 	defaultShader.Delete();
 	skyboxShader.Delete();
-
 	framebufferShader.Delete();
+	shadowMapShader.Delete();
+	instanceShader.Delete();
+
 	framebuffer.Unbind();
 
 	glfwDestroyWindow(window);

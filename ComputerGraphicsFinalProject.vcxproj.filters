@@ -133,6 +133,9 @@
     <None Include="framebuffer.frag">
       <Filter>Resource Files\Shaders</Filter>
     </None>
+    <None Include="instance.vert">
+      <Filter>Resource Files\Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Textures\MinecraftGrassBlock.jpg">

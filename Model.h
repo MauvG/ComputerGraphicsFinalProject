@@ -21,16 +21,20 @@ struct AnimationChannel {
 
 class Model {
 public:
-    Model(const std::string& filePath);
-    void Draw(Shader& shader, Camera& camera, glm::mat4 model);
+    Model(const std::string& filePath, unsigned int instancing = 1, std::vector<glm::mat4> instanceMatrix = {});
+    void Draw(Shader& shader, Camera& camera, glm::mat4 model = glm::mat4(1.0f));
 
     void UpdateAnimation(float currentTime);
 
 private:
+    std::string filePath;
+    unsigned int instancing;
+
     tinygltf::Model model;
     std::vector<Mesh> meshes;
+
     std::vector<glm::mat4> matricesMeshes;
-    std::string filePath;
+    std::vector<glm::mat4> instanceMatrix;
 
     std::vector<AnimationChannel> animationChannels;
     float animationDuration = 0.0f;

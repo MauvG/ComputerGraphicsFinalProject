@@ -70,7 +70,7 @@ vec4 directLight(vec4 blendedColor)
         float currentDepth = lightCoordinate.z;
         float bias = max(0.025f * (1.0f - dot(currentNormal, lightDirection)), 0.0005f);
 
-        int sampleRadius = 4;
+        int sampleRadius = 2;
         vec2 pixelSize = 1.0 / textureSize(shadowMap, 0);
 
         for(int y = -sampleRadius; y <= sampleRadius; y++)
@@ -98,4 +98,5 @@ void main()
     float fogFactor = clamp((fogEnd - distance) / (fogEnd - fogStart), 0.0, 1.0);
 
     FragColor = mix(vec4(fogColor, 1.0), lightColor, fogFactor);
+    //FragColor = blendedColor;
 }

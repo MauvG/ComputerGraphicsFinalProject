@@ -5,7 +5,11 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
-Model::Model(const std::string& filePath) : filePath(filePath) {
+Model::Model(const std::string& filePath, unsigned int instancing, std::vector<glm::mat4> instanceMatrix) {
+    Model::filePath = filePath;
+    Model::instancing = instancing;
+    Model::instanceMatrix = instanceMatrix;
+
     LoadModel(filePath);
 }
 
@@ -165,7 +169,7 @@ void Model::ProcessMesh(const tinygltf::Mesh& gltfMesh, const glm::mat4& transfo
             }
         }
 
-        meshes.emplace_back(vertices, indices, textures);
+        meshes.emplace_back(vertices, indices, textures, instancing, instanceMatrix);
         matricesMeshes.emplace_back(transform);
     }
 }
@@ -221,11 +225,7 @@ std::vector<GLuint> Model::GetIndices(const tinygltf::Accessor& accessor) {
 
 void Model::Draw(Shader& shader, Camera& camera, glm::mat4 modelMatrix) {
     for (size_t i = 0; i < meshes.size(); ++i) {
-        shader.Activate();
-
         glm::mat4 finalModel = modelMatrix * matricesMeshes[i];
-        glUniformMatrix4fv(glGetUniformLocation(shader.id, "model"), 1, GL_FALSE, glm::value_ptr(finalModel));
-
         meshes[i].Draw(shader, camera, finalModel);
     }
 }
