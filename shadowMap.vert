@@ -8,5 +8,6 @@ uniform mat4 model;
 
 void main()
 {
-    gl_Position = lightProjection * aInstanceMatrix * model * vec4(aPosition, 1.0);
+    //gl_Position = lightProjection * model * vec4(aPosition, 1.0);
+    gl_Position = lightProjection * aInstanceMatrix * vec4(aPosition, 1.0);
 }

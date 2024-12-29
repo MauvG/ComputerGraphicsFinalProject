@@ -26,7 +26,7 @@ uniform bool enableFog;
 
 vec4 blendColor()
 {
-    float heightThreshold = 1.0f;
+    float heightThreshold = 10.0f;
     vec4 textureOne = texture(diffuse0, textureCoordinate);
     vec4 textureTwo = texture(diffuse1, textureCoordinate);
 

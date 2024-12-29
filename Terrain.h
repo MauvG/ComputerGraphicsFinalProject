@@ -21,7 +21,7 @@ public:
     float GetHeightAt(float x, float z) const;
     float GetSize() const { return size; }
     void UpdateTerrain(float offsetX, float offsetZ);
-    std::vector<glm::mat4> GenerateObjectPositions(int R, float noiseScale, float sizeScale, float offsetX, float offsetZ) const;
+    std::vector<glm::mat4> GenerateObjectPositions(int R, float noiseScale, float sizeScale, float offsetX, float offsetZ, float modelYOffset) const;
 
 
 private:

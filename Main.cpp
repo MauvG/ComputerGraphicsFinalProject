@@ -69,8 +69,9 @@ int main()
 
 	// Fog
 	glm::vec3 fogColor(0.0, 0.3, 0.5);
-	float fogStart = 50.0f;
-	float fogEnd = 100.0f; 
+	float fogStart = 25.0f;
+	float fogEnd = 50.0f; 
+	float cameraEnd = fogEnd + 50.0f;
 
 	defaultShader.Activate();
 	glUniform3f(glGetUniformLocation(defaultShader.id, "fogColor"), fogColor.x, fogColor.y, fogColor.z);
@@ -85,17 +86,9 @@ int main()
 	// Create camera object
 	Camera camera(width, height, glm::vec3(0.0f, 0.0f, 0.0f));
 
-	Model ufo("Models/Ufo/scene.gltf");
-	glm::mat4 ufoModel = glm::mat4(1.0f);
-
-	// Terrain movement
-	float terrainOffsetX = 0.0;
-	float terrainOffsetZ = 0.0;
-	float moveSpeed = 10.0f;
-
 	// Terrain
-	float terrainSize = fogEnd + 100;                // Size of the terrain
-	unsigned int terrainResolution = 256;       // Resolution (number of vertices per axis)
+	float terrainSize = cameraEnd;                // Size of the terrain
+	unsigned int terrainResolution = 512;       // Resolution (number of vertices per axis)
 	float terrainHeightScale = 20.0f;          // Height multiplier (adjust as needed)
 	float terrainNoiseFrequency = 0.02f;        // Base frequency for larger features
 	int terrainOctaves = 4;                     // Number of noise layers
@@ -112,13 +105,36 @@ int main()
 		terrainGain
 	);
 
-	glm::mat4 terrainModel = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+	// Terrain variables
+	glm::mat4 terrainModel = glm::mat4(1.0f);
+	float terrainOffsetX = 0.0;
+	float terrainOffsetZ = 0.0;
+	float generationThreshold = terrainSize * 0.25;
+	
+	terrain.UpdateTerrain(terrainOffsetX, terrainOffsetZ);
+	terrainModel = glm::mat4(1.0f);
 
 	// Trees
 	float treeNoise = 5000.0f;
-	float treeScale = 0.5f;
-	std::vector<glm::mat4> treeInstances = terrain.GenerateObjectPositions(3.0f, treeNoise, treeScale, terrainOffsetX, terrainOffsetZ);
+	float treeScale = 0.5f; 
+	std::vector<glm::mat4> treeInstances = terrain.GenerateObjectPositions(3.0f, treeNoise, treeScale, terrainOffsetX, terrainOffsetZ, 1.25f);
 	Model tree("Models/MyTree/scene.gltf", treeInstances.size(), treeInstances);
+
+	// Ufos
+	//float ufoNoise = 10.0f;
+	//float ufoScale = 0.5f;
+	//std::vector<glm::mat4> ufoInstances = terrain.GenerateObjectPositions(3.0f, ufoNoise, ufoScale, terrainOffsetX, terrainOffsetZ, 5.0f);
+	//Model ufo("Models/Ufo/scene.gltf", ufoInstances.size(), ufoInstances);
+	
+	Model ufo1("Models/MyUfo/scene.gltf");
+	glm::mat4 ufo1ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(30.0f, 5.0f, 30.0f));
+
+	Model ufo2("Models/MyUfo/scene.gltf");
+	glm::mat4 ufo2ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-15.0f, 10.0f, -45.0f));
+
+	Model ufo3("Models/MyUfo/scene.gltf");
+	glm::mat4 ufo3ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(20.0f, 7.5f, -10.0f));
+
 
 	// Rocks
 	//float rockNoise = 300.0f;
@@ -160,6 +176,10 @@ int main()
 	double timeDifference;
 	unsigned int counter = 0;
 
+	float distanceTravelledX = 0.0f;
+	float distanceTravelledZ = 0.0f;
+	glm::vec3 previousPosition = camera.position;
+
 	// Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -173,7 +193,9 @@ int main()
 		currentAnimationTime += deltaTime;
 
 		// Update UFO animation
-		ufo.UpdateAnimation(currentAnimationTime);
+		ufo1.UpdateAnimation(currentAnimationTime);
+		ufo2.UpdateAnimation(currentAnimationTime);
+		ufo3.UpdateAnimation(currentAnimationTime);
 
 		// Count fps
 		currentTime = glfwGetTime();
@@ -190,69 +212,64 @@ int main()
 			counter = 0;
 		}
 
-		// Move terrain
-		bool terrainMoved = false;
-		glm::vec3 cameraForward = glm::normalize(camera.GetForward());
-		glm::vec3 cameraRight = glm::normalize(glm::cross(cameraForward, glm::vec3(0.0f, 1.0f, 0.0f)));
+		distanceTravelledX = camera.position.x - previousPosition.x;
+		distanceTravelledZ = camera.position.z - previousPosition.z;
+		//std::cout << distanceTravelledX << ", " << distanceTravelledZ << std::endl;
 
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-			terrainOffsetX += cameraForward.x * moveSpeed * deltaTime;
-			terrainOffsetZ += cameraForward.z * moveSpeed * deltaTime;
-			terrainMoved = true;
-		}
-		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-			terrainOffsetX -= cameraForward.x * moveSpeed * deltaTime;
-			terrainOffsetZ -= cameraForward.z * moveSpeed * deltaTime;
-			terrainMoved = true;
-		}
-		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-			terrainOffsetX -= cameraRight.x * moveSpeed * deltaTime;
-			terrainOffsetZ -= cameraRight.z * moveSpeed * deltaTime;
-			terrainMoved = true;
-		}
-		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-			terrainOffsetX += cameraRight.x * moveSpeed * deltaTime;
-			terrainOffsetZ += cameraRight.z * moveSpeed * deltaTime;
-			terrainMoved = true;
-		}
-
-		if (terrainMoved)
+		if (abs(distanceTravelledX) > generationThreshold || abs(distanceTravelledZ) > generationThreshold)
 		{
+			terrainOffsetX += distanceTravelledX;
+			terrainOffsetZ += distanceTravelledZ;
+
+			camera.ResetPosition();
+
 			terrain.UpdateTerrain(terrainOffsetX, terrainOffsetZ);
 			terrainModel = glm::mat4(1.0f);
 
-			if (timeDifference > 1.0 / 10.0)
-			{
+			// Generate positions for trees
+			treeInstances = terrain.GenerateObjectPositions(3, treeNoise, treeScale, terrainOffsetX, terrainOffsetZ, 1.25f);
+			tree.UpdateInstances(static_cast<unsigned int>(treeInstances.size()), treeInstances);
 
-				// Generate positions for trees
-				treeInstances = terrain.GenerateObjectPositions(3, treeNoise, treeScale, terrainOffsetX, terrainOffsetZ);
-				tree.UpdateInstances(static_cast<unsigned int>(treeInstances.size()), treeInstances);
+			//ufoInstances = terrain.GenerateObjectPositions(3, ufoNoise, ufoScale, terrainOffsetX, terrainOffsetZ, 5.0f);
+			//ufo.UpdateInstances(static_cast<unsigned int>(ufoInstances.size()), ufoInstances);
 
-				// Generate positions for rocks
-				//rockInstances = terrain.GenerateObjectPositions(3, rockNoise, rockScale, terrainOffsetX, terrainOffsetZ);
-				//rock.UpdateInstances(static_cast<unsigned int>(rockInstances.size()), rockInstances);
+			// Generate positions for rocks
+			//rockInstances = terrain.GenerateObjectPositions(3, rockNoise, rockScale, terrainOffsetX, terrainOffsetZ);
+			//rock.UpdateInstances(static_cast<unsigned int>(rockInstances.size()), rockInstances);
 
-				//std::cout << "Trees: " << treeInstances.size() << " Rocks: " << rockInstances.size() << std::endl;
-			}
+			//std::cout << "Trees: " << treeInstances.size() << " Rocks: " << rockInstances.size() << std::endl;
+
+			ufo1ModelMatrix = glm::translate(ufo1ModelMatrix, glm::vec3(-distanceTravelledX, 0.0f, -distanceTravelledZ));
+			ufo2ModelMatrix = glm::translate(ufo2ModelMatrix, glm::vec3(-distanceTravelledX, 0.0f, -distanceTravelledZ));
+			ufo3ModelMatrix = glm::translate(ufo3ModelMatrix, glm::vec3(-distanceTravelledX, 0.0f, -distanceTravelledZ));
+
+			distanceTravelledX = 0.0f;
+			previousPosition = camera.position;
 		}
 
 		// Depth testing needed for Shadow Map
 		shadows.EnableDepthTest();
 
-		// Draw scene for shadow
+		glEnable(GL_CULL_FACE);
+
+		// Draw scene for shadow using instancing
 		shadowMapShader.Activate();
-		ufo.Draw(shadowMapShader, camera, ufoModel);
-	
-		//// Draw all trees and rocks for shadow using instancing
+		
 		tree.Draw(shadowMapShader, camera);
+		ufo1.Draw(shadowMapShader, camera, ufo1ModelMatrix);
+		ufo2.Draw(shadowMapShader, camera, ufo2ModelMatrix);
+		ufo3.Draw(shadowMapShader, camera, ufo3ModelMatrix);
+
 		//rock.Draw(shadowMapShader, camera);
+
+		glDisable(GL_CULL_FACE);
 
 		// Switch back to the default
 		framebuffer.Default();
 
 		// Handles camera
 		camera.Inputs(window);
-		camera.UpdateMatrix(45.0f, 0.1f, fogEnd + 100);
+		camera.UpdateMatrix(45.0f, 0.1f, cameraEnd);
 
 		// Send the light matrix to the shader
 		defaultShader.Activate();
@@ -274,11 +291,14 @@ int main()
 
 		defaultShader.Activate();
 		terrain.Draw(defaultShader, camera, terrainModel);
-		ufo.Draw(defaultShader, camera, ufoModel);
+		ufo1.Draw(defaultShader, camera, ufo1ModelMatrix);
+		ufo2.Draw(defaultShader, camera, ufo2ModelMatrix);
+		ufo3.Draw(defaultShader, camera, ufo3ModelMatrix);
 
-		// Draw all trees and rocks using instancing
+		// Draw instances
 		instanceShader.Activate();
 		tree.Draw(instanceShader, camera);
+		//ufo.Draw(instanceShader, camera);
 		//rock.Draw(instanceShader, camera);
 
 		glDisable(GL_CULL_FACE);

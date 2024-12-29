@@ -35,5 +35,7 @@ public:
 
 	glm::vec3 GetForward() const;
 	glm::vec3 GetRight() const;
+
+	void ResetPosition();
 };
 #endif

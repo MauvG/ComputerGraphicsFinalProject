@@ -17,7 +17,7 @@ Terrain::Terrain(float size, unsigned int resolution, float heightScale, float n
     CalculateNormals(vertices, indices);
 
     std::vector <Texture> textures{ Texture("Textures/Grass1.jpg", "diffuse", 0), Texture("Textures/Grass2.jpg", "diffuse", 1) };
-    Terrain::textureScale = size / 100;
+    Terrain::textureScale = size / 50;
 
     terrainMesh = new Mesh(vertices, indices, textures);
 }
@@ -45,7 +45,6 @@ void Terrain::GenerateTerrain(std::vector<Vertex>& vertices, std::vector<GLuint>
             vertex.position.x = -halfSize + x * step;
             vertex.position.z = -halfSize + z * step;
             vertex.position.y = noise.GetNoise(vertex.position.x, vertex.position.z) * heightScale;
-            //vertex.textureUV = glm::vec2((static_cast<float>(x) / (resolution - 1)) * textureScale, (static_cast<float>(z) / (resolution - 1)) * textureScale);
             vertex.textureUV = glm::vec2((vertex.position.x / size) * textureScale, (vertex.position.z / size) * textureScale);
             vertex.color = glm::vec3(1.0f, 1.0f, 1.0f);
             vertex.height = vertex.position.y;
@@ -176,7 +175,7 @@ void Terrain::UpdateTerrain(float offsetX, float offsetZ)
     terrainMesh->UpdateVertices(vertices, indices);
 }
 
-std::vector<glm::mat4> Terrain::GenerateObjectPositions(int R, float noiseScale, float sizeScale, float offsetX, float offsetZ) const
+std::vector<glm::mat4> Terrain::GenerateObjectPositions(int R, float noiseScale, float sizeScale, float offsetX, float offsetZ, float modelYOffset) const
 {   
     std::vector<glm::mat4> instances;
     // Create a 2D grid to store noise values
@@ -221,7 +220,7 @@ std::vector<glm::mat4> Terrain::GenerateObjectPositions(int R, float noiseScale,
             if (isLocalMax) {
                 // Get the world position from the vertex
                 const Vertex& vertex = vertices[yc * resolution + xc];
-                glm::vec3 position = glm::vec3(vertex.position.x, vertex.position.y + 1.25, vertex.position.z);
+                glm::vec3 position = glm::vec3(vertex.position.x, vertex.position.y + modelYOffset, vertex.position.z);
 
                 // Create a transformation matrix for the tree
                 glm::mat4 modelMatrix = glm::mat4(1.0f);
